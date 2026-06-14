@@ -136,14 +136,47 @@ All settings via `.env`:
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o
+LLM_MAX_TOKENS=4096
+LLM_TEMPERATURE=0.0
 
 # Agent
 MAX_STEPS=200
 ACTION_DELAY=0.1
+REQUEST_TIMEOUT=60
 
 # Capture Mode: som | vision
 CAPTURE_MODE=som
+
+# Screenshots
+SCREENSHOT_DIR=screenshots
+SCREENSHOT_FORMAT=png
+
+# Logging
+LOG_LEVEL=INFO
+LOG_DIR=logs
+
+# Visual Effects (experimental)
+VISUAL_EFFECTS=off
 ```
+
+### Configuration Reference
+
+| Key | Default | Description |
+|-----|---------|-------------|
+| `LLM_API_KEY` | `sk-placeholder` | API key for your LLM provider |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | API endpoint (any OpenAI-compatible) |
+| `LLM_MODEL` | `gpt-4o` | Model name |
+| `LLM_MAX_TOKENS` | `4096` | Max output tokens per response |
+| `LLM_TEMPERATURE` | `0.0` | Temperature (0 = deterministic) |
+| `MAX_STEPS` | `200` | Max agent steps per task |
+| `ACTION_DELAY` | `0.1` | Delay between actions in seconds |
+| `REQUEST_TIMEOUT` | `60` | API request timeout in seconds |
+| `CAPTURE_MODE` | `vision` | `som` (UIA element indexing) or `vision` (pure screenshot) |
+| `SCREENSHOT_DIR` | `screenshots` | Directory to save screenshots |
+| `SCREENSHOT_FORMAT` | `png` | Screenshot format |
+| `LOG_LEVEL` | `INFO` | Log level: DEBUG, INFO, WARNING, ERROR |
+| `LOG_DIR` | `logs` | Log directory |
+| `VISUAL_EFFECTS` | `off` | `on` to enable breathing border + mouse ripple |
 
 ## Requirements
 

@@ -136,14 +136,47 @@ computer_use_agent/
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o
+LLM_MAX_TOKENS=4096
+LLM_TEMPERATURE=0.0
 
 # Agent
 MAX_STEPS=200
 ACTION_DELAY=0.1
+REQUEST_TIMEOUT=60
 
 # 截图模式: som | vision
 CAPTURE_MODE=som
+
+# 截图保存
+SCREENSHOT_DIR=screenshots
+SCREENSHOT_FORMAT=png
+
+# 日志
+LOG_LEVEL=INFO
+LOG_DIR=logs
+
+# 视觉效果（实验性）
+VISUAL_EFFECTS=off
 ```
+
+### 配置项说明
+
+| 配置项 | 默认值 | 说明 |
+|--------|--------|------|
+| `LLM_API_KEY` | `sk-placeholder` | API 密钥 |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | API 地址（支持任意 OpenAI 兼容接口） |
+| `LLM_MODEL` | `gpt-4o` | 模型名称 |
+| `LLM_MAX_TOKENS` | `4096` | 每次响应最大 token 数 |
+| `LLM_TEMPERATURE` | `0.0` | 温度（0 = 确定性输出） |
+| `MAX_STEPS` | `200` | 单个任务最大步数 |
+| `ACTION_DELAY` | `0.1` | 操作间延迟（秒） |
+| `REQUEST_TIMEOUT` | `60` | API 请求超时（秒） |
+| `CAPTURE_MODE` | `vision` | `som`（UIA 元素索引）或 `vision`（纯视觉） |
+| `SCREENSHOT_DIR` | `screenshots` | 截图保存目录 |
+| `SCREENSHOT_FORMAT` | `png` | 截图格式 |
+| `LOG_LEVEL` | `INFO` | 日志级别：DEBUG, INFO, WARNING, ERROR |
+| `LOG_DIR` | `logs` | 日志目录 |
+| `VISUAL_EFFECTS` | `off` | 设为 `on` 开启呼吸边框 + 鼠标涟漪效果 |
 
 ## 环境要求
 
