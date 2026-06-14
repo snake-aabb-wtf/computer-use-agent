@@ -275,3 +275,20 @@ def get_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="v
     if _DEFAULT_PROMPT is None:
         _DEFAULT_PROMPT = build_system_prompt(screen_width, screen_height, model, capture_mode)
     return _DEFAULT_PROMPT
+
+
+# 模型特定指令
+_OPENAI_SPECIFIC = """# Execution Discipline (OpenAI/Grok models)
+
+- Use actions whenever they improve correctness or completeness
+- Do not stop early when another action would materially improve the result
+- If an action returns unexpected results, retry with a different approach before giving up
+- Keep acting until: (1) the task is complete, AND (2) you have verified the result on screen
+- Before finalizing: check correctness, grounding in actual screenshots, and formatting"""
+
+_GOOGLE_SPECIFIC = """# Operational Directives (Gemini/Gemma models)
+
+- Verify first: Look at the screenshot carefully before making changes
+- Be concise: Keep thoughts brief -- focus on actions and results
+- Keep going: Work autonomously until the task is fully resolved
+- Don't stop with a plan -- execute it"""
