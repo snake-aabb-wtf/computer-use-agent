@@ -290,8 +290,16 @@ def execute(action: dict) -> str:
 
         elif act == "key":
             key = _normalize_key(action["key"])
-            pyautogui.press(key)
-            return f"按键 [{key}]"
+            hold_time = action.get("hold", 0)
+            if hold_time > 0:
+                # 长按：按住指定时间后松开
+                pyautogui.keyDown(key)
+                time.sleep(hold_time)
+                pyautogui.keyUp(key)
+                return f"长按 [{key}] {hold_time}s"
+            else:
+                pyautogui.press(key)
+                return f"按键 [{key}]"
 
         elif act == "hotkey":
             keys = [_normalize_key(k) for k in action["keys"]]

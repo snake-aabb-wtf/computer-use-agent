@@ -91,10 +91,12 @@ The screenshot has RED NUMBERED OVERLAYS on each interactable element. Use the e
 ## Keyboard
 {"thought": "...", "action": "key", "key": "enter"}
 {"thought": "...", "action": "hotkey", "keys": ["ctrl", "c"]}
+{"thought": "...", "action": "key", "key": "backspace", "hold": 2}
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
 Modifiers for hotkey: ctrl, alt, shift, win
 Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling.
+Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete multiple chars).
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
@@ -133,10 +135,12 @@ You interact with the desktop through these actions. Return ONE action per respo
 ## Keyboard
 {"thought": "...", "action": "key", "key": "enter"}
 {"thought": "...", "action": "hotkey", "keys": ["ctrl", "c"]}
+{"thought": "...", "action": "key", "key": "backspace", "hold": 2}
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
 Modifiers for hotkey: ctrl, alt, shift, win
 Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling.
+Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete multiple chars).
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
