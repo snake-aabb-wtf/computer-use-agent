@@ -1,9 +1,9 @@
-"""Windows UIA 元素获取 + SOM 覆盖层渲染
+"""Windows UIA element tree + SOM overlay rendering
 
-借鉴 Hermes cua_backend.py 的 SOM (Set-of-Mark) 模式:
-- 通过 Windows UIA 获取所有可交互元素
-- 在截图上给每个元素画红色边框 + 编号标签
-- 模型通过编号选择元素，而非猜坐标
+Borrowed from Hermes cua_backend.py SOM (Set-of-Mark) pattern:
+- Get all interactable elements via Windows UIA
+- Draw red border + number label on each element
+- Model selects elements by number instead of guessing coordinates
 """
 
 import io
@@ -16,7 +16,6 @@ logger = logging.getLogger("agent.uia")
 
 @dataclass
 class UIElement:
-    """一个可交互的 UI 元素。"""
     index: int
     role: str
     label: str
@@ -36,7 +35,6 @@ class UIElement:
 
 
 def get_elements(max_elements=100):
-    """通过 Windows UIA 获取所有可交互元素。"""
     try:
         import uiautomation as auto
     except ImportError:
@@ -130,7 +128,6 @@ def _simplify_role(class_name):
 
 
 def render_som(screenshot, elements, max_elements=100, font_size=14):
-    """在截图上绘制 SOM 覆盖层。"""
     overlay = screenshot.copy()
     draw = ImageDraw.Draw(overlay, "RGBA")
     try:
