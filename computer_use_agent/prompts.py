@@ -111,9 +111,10 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 
 ## When to wait
 - After clicking a link/button that loads a page: wait 2-5s
-- After triggering a download: wait 3-10s
+- After triggering a download: wait 60-300s (1-5 minutes), then screenshot to check
 - After submitting a form: wait 2-3s
 - When waiting for an animation or transition: wait 1-2s
+- For large file downloads: wait up to 600s (10 minutes), screenshot to verify
 - Use screenshot after wait to verify the result"""
 
 
@@ -153,9 +154,10 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 
 ## When to wait
 - After clicking a link/button that loads a page: wait 2-5s
-- After triggering a download: wait 3-10s
+- After triggering a download: wait 60-300s (1-5 minutes), then screenshot to check
 - After submitting a form: wait 2-3s
 - When waiting for an animation or transition: wait 1-2s
+- For large file downloads: wait up to 600s (10 minutes), screenshot to verify
 - Use screenshot after wait to verify the result"""
 
 
@@ -201,9 +203,10 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 
 ## When to wait
 - After clicking a link/button that loads a page: wait 2-5s
-- After triggering a download: wait 3-10s
+- After triggering a download: wait 60-300s (1-5 minutes), then screenshot to check
 - After submitting a form: wait 2-3s
 - When waiting for an animation or transition: wait 1-2s
+- For large file downloads: wait up to 600s (10 minutes), screenshot to verify
 - Use screenshot after wait to verify the result"""
 
 
