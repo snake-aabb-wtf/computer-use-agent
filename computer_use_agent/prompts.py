@@ -130,7 +130,8 @@ Modifiers for hotkey: ctrl, alt, shift, win
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
-- amount: 1=small, 3=medium, 5=half-page, 10=full-page
+- amount: 1=small, 3=medium, 5=full-page, 10=2x full-page
+- Each amount unit = 5 scroll clicks
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
@@ -169,6 +170,7 @@ Modifiers for hotkey: ctrl, alt, shift, win (space-separated, lowercase, max 3 k
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
+- amount: 1=small, 3=medium, 5=full-page, 10=2x full-page
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
