@@ -71,20 +71,19 @@ COMPUTER_USE = """# Computer Use Workflow
 - If you encounter a permission dialog or password prompt, STOP and report"""
 
 
-TOOL_GUIDANCE = """# Available Actions
+TOOL_GUIDANCE_SOM = """# Available Actions (SOM Mode)
 
 You interact with the desktop through these actions. Return ONE action per response as a JSON object.
 
-## Click Actions (SOM mode - PREFERRED)
+The screenshot has RED NUMBERED OVERLAYS on each interactable element. Use the element number to click.
+
+## Click Actions (PREFERRED: use element number)
 {"thought": "...", "action": "left_click", "element": N}
 {"thought": "...", "action": "double_click", "element": N}
 {"thought": "...", "action": "right_click", "element": N}
-- Use the element number from the red SOM overlay on the screenshot
-- This is MORE ACCURATE than pixel coordinates
 
-## Click Actions (fallback: coordinates)
+## Click Actions (fallback: pixel coordinates)
 {"thought": "...", "action": "left_click", "coordinate": [x, y]}
-{"thought": "...", "action": "double_click", "coordinate": [x, y]}
 
 ## Text Input
 {"thought": "...", "action": "type", "text": "text to type"}
@@ -99,8 +98,39 @@ Modifiers for hotkey: ctrl, alt, shift, win
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
 - amount: 1=small, 3=medium, 5=half-page, 10=full-page
-- Use 5-10 for web browsing
-- Each amount unit triggers 3 scroll clicks
+
+## Mouse
+{"thought": "...", "action": "move", "coordinate": [x, y]}
+{"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2]}
+
+## Control
+{"thought": "...", "action": "wait", "seconds": 2}
+{"thought": "...", "action": "screenshot"}
+{"thought": "...", "action": "done", "message": "why the task is complete"}"""
+
+
+TOOL_GUIDANCE_VISION = """# Available Actions (Vision Mode)
+
+You interact with the desktop through these actions. Return ONE action per response as a JSON object.
+
+## Click Actions
+{"thought": "...", "action": "left_click", "coordinate": [x, y]}
+{"thought": "...", "action": "double_click", "coordinate": [x, y]}
+{"thought": "...", "action": "right_click", "coordinate": [x, y]}
+
+## Text Input
+{"thought": "...", "action": "type", "text": "text to type"}
+
+## Keyboard
+{"thought": "...", "action": "key", "key": "enter"}
+{"thought": "...", "action": "hotkey", "keys": ["ctrl", "c"]}
+
+Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
+Modifiers for hotkey: ctrl, alt, shift, win
+
+## Scroll
+{"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
+- amount: 1=small, 3=medium, 5=half-page, 10=full-page
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
@@ -211,19 +241,16 @@ def build_environment_context(screen_width: int = 0, screen_height: int = 0) -> 
 # ASSEMBLY: 组装完整系统提示词
 # ═══════════════════════════════════════════════════════════
 
-def build_system_prompt(screen_width: int = 0, screen_height: int = 0, model: str = "") -> str:
-    """组装三层系统提示词。
+def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
+    """组装系统提示词。根据 capture_mode 切换 SOM/Vision 模式指引。"""
+    # 根据模式选择对应的工具指引
+    tool_guidance = TOOL_GUIDANCE_SOM if capture_mode == "som" else TOOL_GUIDANCE_VISION
 
-    借鉴 Hermes system_prompt.py:
-    - Stable tier: 不变内容，利于 KV cache
-    - Context tier: 环境信息
-    - 模型特定: 根据模型名注入特定指引
-    """
     parts = [
         IDENTITY,
         TASK_COMPLETION,
         COMPUTER_USE,
-        TOOL_GUIDANCE,
+        tool_guidance,
         OUTPUT_FORMAT,
         SAFETY_RULES,
         ERROR_RECOVERY,
@@ -232,7 +259,7 @@ def build_system_prompt(screen_width: int = 0, screen_height: int = 0, model: st
         build_environment_context(screen_width, screen_height),
     ]
 
-    # 借鉴: 模型特定指令 (system_prompt.py line 166-177)
+    # 模型特定指令
     model_lower = model.lower() if model else ""
     if any(m in model_lower for m in ("gpt", "codex", "grok")):
         parts.append(_OPENAI_SPECIFIC)
@@ -242,31 +269,9 @@ def build_system_prompt(screen_width: int = 0, screen_height: int = 0, model: st
     return "\n\n".join(parts)
 
 
-# 借鉴: OPENAI_MODEL_EXECUTION_GUIDANCE (prompt_builder.py)
-_OPENAI_SPECIFIC = """# Execution Discipline (OpenAI/Grok models)
-
-- Use actions whenever they improve correctness or completeness
-- Do not stop early when another action would materially improve the result
-- If an action returns unexpected results, retry with a different approach before giving up
-- Keep acting until: (1) the task is complete, AND (2) you have verified the result on screen
-- Before finalizing: check correctness, grounding in actual screenshots, and formatting"""
-
-# 借鉴: GOOGLE_MODEL_OPERATIONAL_GUIDANCE (prompt_builder.py)
-_GOOGLE_SPECIFIC = """# Operational Directives (Gemini/Gemma models)
-
-- Verify first: Look at the screenshot carefully before making changes
-- Be concise: Keep thoughts brief -- focus on actions and results
-- Keep going: Work autonomously until the task is fully resolved
-- Don't stop with a plan -- execute it"""
-
-
-# 默认系统提示词（缓存）
-_DEFAULT_PROMPT = None
-
-
-def get_system_prompt(screen_width: int = 0, screen_height: int = 0, model: str = "") -> str:
+def get_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
     """获取系统提示词（带缓存）。"""
     global _DEFAULT_PROMPT
     if _DEFAULT_PROMPT is None:
-        _DEFAULT_PROMPT = build_system_prompt(screen_width, screen_height, model)
+        _DEFAULT_PROMPT = build_system_prompt(screen_width, screen_height, model, capture_mode)
     return _DEFAULT_PROMPT

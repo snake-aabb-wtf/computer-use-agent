@@ -111,7 +111,7 @@ class Agent:
             w, h = get_screen_size()
         except Exception:
             w, h = 0, 0
-        self.system_prompt = build_system_prompt(w, h, config.LLM_MODEL)
+        self.system_prompt = build_system_prompt(w, h, config.LLM_MODEL, config.CAPTURE_MODE)
 
         # 借鉴: 工具循环护栏 (tool_guardrails.py)
         self.guardrails = ToolCallGuardrails()
