@@ -31,9 +31,7 @@ class BreathingBorder:
         self._running = False
         self._thread = None
         self._hwnd = None
-        self._opacity = 0.0
-        self._direction = 1
-        self._border_width = 4
+        self._time = 0.0
 
     def start(self):
         if self._running:
@@ -82,40 +80,141 @@ class BreathingBorder:
             self._running = False
 
     def _draw_border(self, hwnd, sw, sh):
-        """Draw the breathing border using GDI."""
+        """Draw sci-fi breathing border with glow and corner accents."""
         try:
-            # Breathing animation
-            self._opacity += self._direction * 0.02
-            if self._opacity >= 0.5:
-                self._opacity = 0.5
-                self._direction = -1
-            elif self._opacity <= 0.0:
-                self._opacity = 0.0
-                self._direction = 1
+            # Animation time
+            self._time += 0.05
 
-            # Get DC
+            # Breathing: smooth sine wave
+            breath = (math.sin(self._time * 2.0) + 1.0) / 2.0  # 0.0 ~ 1.0
+
+            # Flash pulse: sharp spike every 2 seconds
+            flash = max(0, math.sin(self._time * 3.14) ** 20)  # sharp pulse
+
+            # Combined intensity
+            intensity = breath * 0.4 + flash * 0.6
+
             hdc = user32.GetDC(hwnd)
 
-            # Create blue brush with breathing intensity
-            intensity = int(self._opacity * 255)
-            b = intensity
-            g = int(intensity * 0.5)
-            r = int(intensity * 0.2)
-            color = (b << 16) | (g << 8) | r  # BGR format
-
-            brush = gdi32.CreateSolidBrush(color)
+            # --- Layer 1: Outer glow (wide, dim) ---
+            glow_alpha = int(intensity * 60)
+            glow_color = (glow_alpha << 16) | (int(glow_alpha * 1.5) << 8) | min(255, glow_alpha + 40)
+            brush = gdi32.CreateSolidBrush(glow_color)
             old_brush = gdi32.SelectObject(hdc, brush)
+            gw = 8
+            gdi32.Rectangle(hdc, 0, 0, sw, gw)
+            gdi32.Rectangle(hdc, 0, sh - gw, sw, sh)
+            gdi32.Rectangle(hdc, 0, 0, gw, sh)
+            gdi32.Rectangle(hdc, sw - gw, 0, sw, sh)
+            gdi32.SelectObject(hdc, old_brush)
+            gdi32.DeleteObject(brush)
 
-            # Draw border rectangles (4 sides)
-            bw = self._border_width
-            # Top
-            gdi32.Rectangle(hdc, 0, 0, sw, bw)
-            # Bottom
-            gdi32.Rectangle(hdc, 0, sh - bw, sw, sh)
-            # Left
-            gdi32.Rectangle(hdc, 0, 0, bw, sh)
-            # Right
-            gdi32.Rectangle(hdc, sw - bw, 0, sw, sh)
+            # --- Layer 2: Main border (bright cyan) ---
+            main_alpha = int(intensity * 255)
+            # Cyan: low R, high G, high B
+            main_r = int(main_alpha * 0.1)
+            main_g = int(main_alpha * 0.8)
+            main_b = main_alpha
+            main_color = (main_b << 16) | (main_g << 8) | main_r
+            brush = gdi32.CreateSolidBrush(main_color)
+            old_brush = gdi32.SelectObject(hdc, brush)
+            bw = 3
+            gdi32.Rectangle(hdc, 10, 10, sw - 10, 10 + bw)
+            gdi32.Rectangle(hdc, 10, sh - 10 - bw, sw - 10, sh - 10)
+            gdi32.Rectangle(hdc, 10, 10, 10 + bw, sh - 10)
+            gdi32.Rectangle(hdc, sw - 10 - bw, 10, sw - 10, sh - 10)
+            gdi32.SelectObject(hdc, old_brush)
+            gdi32.DeleteObject(brush)
+
+            # --- Layer 3: Inner bright line (white/cyan) ---
+            inner_alpha = int(intensity * 200)
+            inner_color = (inner_alpha << 16) | (min(255, inner_alpha + 30) << 8) | min(255, inner_alpha + 50)
+            pen = gdi32.CreatePen(0, 1, inner_color)
+            old_pen = gdi32.SelectObject(hdc, pen)
+            hollow = gdi32.GetStockObject(5)
+            old_brush2 = gdi32.SelectObject(hdc, hollow)
+            gdi32.Rectangle(hdc, 14, 14, sw - 14, sh - 14)
+            gdi32.SelectObject(hdc, old_brush2)
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
+
+            # --- Layer 4: Corner accents (L-shaped) ---
+            corner_len = 60
+            corner_w = 2
+            corner_alpha = int(intensity * 255)
+            cr = int(corner_alpha * 0.2)
+            cg = int(corner_alpha * 1.0)
+            cb = min(255, corner_alpha + 30)
+            corner_color = (cb << 16) | (cg << 8) | cr
+            pen = gdi32.CreatePen(0, corner_w, corner_color)
+            old_pen = gdi32.SelectObject(hdc, pen)
+
+            # Top-left corner
+            gdi32.MoveToEx(hdc, 20, 20, None)
+            gdi32.LineTo(hdc, 20 + corner_len, 20)
+            gdi32.MoveToEx(hdc, 20, 20, None)
+            gdi32.LineTo(hdc, 20, 20 + corner_len)
+
+            # Top-right corner
+            gdi32.MoveToEx(hdc, sw - 20, 20, None)
+            gdi32.LineTo(hdc, sw - 20 - corner_len, 20)
+            gdi32.MoveToEx(hdc, sw - 20, 20, None)
+            gdi32.LineTo(hdc, sw - 20, 20 + corner_len)
+
+            # Bottom-left corner
+            gdi32.MoveToEx(hdc, 20, sh - 20, None)
+            gdi32.LineTo(hdc, 20 + corner_len, sh - 20)
+            gdi32.MoveToEx(hdc, 20, sh - 20, None)
+            gdi32.LineTo(hdc, 20, sh - 20 - corner_len)
+
+            # Bottom-right corner
+            gdi32.MoveToEx(hdc, sw - 20, sh - 20, None)
+            gdi32.LineTo(hdc, sw - 20 - corner_len, sh - 20)
+            gdi32.MoveToEx(hdc, sw - 20, sh - 20, None)
+            gdi32.LineTo(hdc, sw - 20, sh - 20 - corner_len)
+
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
+
+            # --- Layer 5: Scanning line (moving along border) ---
+            scan_pos = int((self._time * 100) % (2 * (sw + sh)))
+            scan_alpha = int(intensity * 180)
+            scan_color = (min(255, scan_alpha + 80) << 16) | (min(255, scan_alpha + 120) << 8) | min(255, scan_alpha + 150)
+            pen = gdi32.CreatePen(0, 2, scan_color)
+            old_pen = gdi32.SelectObject(hdc, pen)
+
+            # Map scan_pos to border position
+            perimeter = 2 * (sw + sh)
+            pos = scan_pos % perimeter
+            if pos < sw:
+                # Top edge, left to right
+                sx, sy = pos, 12
+                ex, ey = pos + 40, 12
+            elif pos < sw + sh:
+                # Right edge, top to bottom
+                sx, sy = sw - 12, pos - sw
+                ex, ey = sw - 12, pos - sw + 40
+            elif pos < 2 * sw + sh:
+                # Bottom edge, right to left
+                p = pos - sw - sh
+                sx, sy = sw - p, sh - 12
+                ex, ey = sw - p - 40, sh - 12
+            else:
+                # Left edge, bottom to top
+                p = pos - 2 * sw - sh
+                sx, sy = 12, sh - p
+                ex, ey = 12, sh - p - 40
+
+            gdi32.MoveToEx(hdc, sx, sy, None)
+            gdi32.LineTo(hdc, ex, ey)
+
+            gdi32.SelectObject(hdc, old_pen)
+            gdi32.DeleteObject(pen)
+
+            user32.ReleaseDC(hwnd, hdc)
+
+        except Exception:
+            pass
 
             # Cleanup
             gdi32.SelectObject(hdc, old_brush)
