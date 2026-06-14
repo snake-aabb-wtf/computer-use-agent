@@ -196,6 +196,10 @@ This converts a hard regression problem into a trivial classification problem.
 - Tool loop guardrails detect repeated failures
 - Graceful interrupt with Ctrl+C
 
+## Acknowledgments
+
+Architecture inspired by [Hermes Agent](https://github.com/nousresearch/hermes-agent) agent engineering patterns.
+
 ## License
 
 MIT
