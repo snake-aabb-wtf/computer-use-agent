@@ -65,7 +65,7 @@ def _walk_tree(node, elements, max_elements, depth, max_depth):
         if len(elements) >= max_elements:
             break
         try:
-            role = child.GetClassName()
+            role = child.ClassName or ""
             name = child.Name or ""
             rect = child.BoundingRectangle
             if rect is None or rect.left == rect.right or rect.top == rect.bottom:
