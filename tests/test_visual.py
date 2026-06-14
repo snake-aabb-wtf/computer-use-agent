@@ -1,4 +1,4 @@
-"""Tests for visual effects (mouse ripple)"""
+"""Tests for visual effects (click, drag, action info)"""
 
 import sys
 import os
@@ -41,41 +41,49 @@ print("=" * 60)
 print("\n[1] Imports")
 def test_import():
     from computer_use_agent.visual_effects import (
-        RippleEffect, init_effects, trigger_ripple, cleanup
+        VisualOverlay, init_effects, trigger_click, trigger_drag,
+        show_action_info, cleanup
     )
 run_test("import all functions", test_import)
 
 
-# [2] RippleEffect
-print("\n[2] RippleEffect")
-def test_ripple_init():
-    from computer_use_agent.visual_effects import RippleEffect
-    r = RippleEffect()
-    assert r._running == False
-    assert r._hwnd is None
-    assert r._ripples == []
-run_test("RippleEffect init", test_ripple_init)
+# [2] VisualOverlay class
+print("\n[2] VisualOverlay")
+def test_overlay_init():
+    from computer_use_agent.visual_effects import VisualOverlay
+    o = VisualOverlay()
+    assert o._running == False
+    assert o._hwnd is None
+    assert o._effects == []
+run_test("VisualOverlay init", test_overlay_init)
 
-def test_ripple_stop_when_not_running():
-    from computer_use_agent.visual_effects import RippleEffect
-    r = RippleEffect()
-    r.stop()
-    assert r._running == False
-run_test("RippleEffect stop when not running", test_ripple_stop_when_not_running)
+def test_overlay_stop_not_running():
+    from computer_use_agent.visual_effects import VisualOverlay
+    o = VisualOverlay()
+    o.stop()
+    assert o._running == False
+run_test("VisualOverlay stop not running", test_overlay_stop_not_running)
 
-def test_ripple_trigger():
-    from computer_use_agent.visual_effects import RippleEffect
-    r = RippleEffect()
-    r.trigger(100, 100)
-    r.trigger(200, 200)
-    assert len(r._ripples) == 2
-run_test("RippleEffect trigger queues ripple", test_ripple_trigger)
+def test_overlay_trigger_click():
+    from computer_use_agent.visual_effects import VisualOverlay
+    o = VisualOverlay()
+    o.trigger_click(100, 200)
+    assert not o._queue.empty()
+run_test("VisualOverlay trigger_click queues", test_overlay_trigger_click)
 
-def test_ripple_trigger_no_crash():
-    from computer_use_agent.visual_effects import RippleEffect
-    r = RippleEffect()
-    r.trigger(100, 100)  # not running, should be safe
-run_test("RippleEffect trigger not running safe", test_ripple_trigger_no_crash)
+def test_overlay_trigger_drag():
+    from computer_use_agent.visual_effects import VisualOverlay
+    o = VisualOverlay()
+    o.trigger_drag(100, 100, 200, 200)
+    assert not o._queue.empty()
+run_test("VisualOverlay trigger_drag queues", test_overlay_trigger_drag)
+
+def test_overlay_show_action_info():
+    from computer_use_agent.visual_effects import VisualOverlay
+    o = VisualOverlay()
+    o.show_action_info("Click", "test thought", "(100, 200)")
+    assert not o._queue.empty()
+run_test("VisualOverlay show_action_info queues", test_overlay_show_action_info)
 
 
 # [3] Global functions
@@ -84,14 +92,14 @@ def test_init_disabled():
     from computer_use_agent import visual_effects
     visual_effects.init_effects(False)
     assert visual_effects._enabled == False
-    assert visual_effects._ripple is None
+    assert visual_effects._overlay is None
 run_test("init_effects disabled", test_init_disabled)
 
 def test_init_enabled():
     from computer_use_agent import visual_effects
     visual_effects.init_effects(True)
     assert visual_effects._enabled == True
-    assert visual_effects._ripple is not None
+    assert visual_effects._overlay is not None
     time.sleep(0.3)
     visual_effects.cleanup()
     time.sleep(0.3)
@@ -103,53 +111,59 @@ def test_cleanup():
     time.sleep(0.2)
     visual_effects.cleanup()
     assert visual_effects._enabled == False
-    assert visual_effects._ripple is None
+    assert visual_effects._overlay is None
     time.sleep(0.3)
 run_test("cleanup clears all", test_cleanup)
 
-def test_trigger_ripple_global():
+def test_trigger_click_global():
     from computer_use_agent import visual_effects
     visual_effects.init_effects(True)
-    visual_effects.trigger_ripple(100, 100)
-    visual_effects.trigger_ripple(200, 200)
+    visual_effects.trigger_click(100, 100)
     time.sleep(0.1)
     visual_effects.cleanup()
     time.sleep(0.3)
-run_test("trigger_ripple global", test_trigger_ripple_global)
+run_test("trigger_click global", test_trigger_click_global)
 
-def test_trigger_disabled():
+def test_trigger_drag_global():
     from computer_use_agent import visual_effects
-    visual_effects.init_effects(False)
-    visual_effects.trigger_ripple(100, 100)  # no-op
+    visual_effects.init_effects(True)
+    visual_effects.trigger_drag(100, 100, 200, 200)
+    time.sleep(0.1)
     visual_effects.cleanup()
-run_test("trigger_ripple disabled no-op", test_trigger_disabled)
+    time.sleep(0.3)
+run_test("trigger_drag global", test_trigger_drag_global)
+
+def test_show_action_info_global():
+    from computer_use_agent import visual_effects
+    visual_effects.init_effects(True)
+    visual_effects.show_action_info("Click", "test", "(100, 100)")
+    time.sleep(0.1)
+    visual_effects.cleanup()
+    time.sleep(0.3)
+run_test("show_action_info global", test_show_action_info_global)
 
 
-# [4] Config
-print("\n[4] Config")
+# [4] Executor integration
+print("\n[4] Executor")
+def test_executor_click():
+    from computer_use_agent.executor import _trigger_click, _show_action_info
+    _trigger_click(100, 100)
+    _show_action_info("Click", "test", "(100, 100)")
+run_test("executor click + info", test_executor_click)
+
+def test_executor_drag():
+    from computer_use_agent.executor import _trigger_drag
+    _trigger_drag(100, 100, 200, 200)
+run_test("executor drag", test_executor_drag)
+
+
+# [5] Config
+print("\n[5] Config")
 def test_config():
     from computer_use_agent import config
     assert hasattr(config, "VISUAL_EFFECTS")
     assert isinstance(config.VISUAL_EFFECTS, bool)
-    print(f"    VISUAL_EFFECTS={config.VISUAL_EFFECTS}")
 run_test("config VISUAL_EFFECTS", test_config)
-
-
-# [5] Executor
-print("\n[5] Executor")
-def test_executor_ripple():
-    from computer_use_agent.executor import _trigger_ripple
-    _trigger_ripple(100, 100)
-run_test("executor _trigger_ripple", test_executor_ripple)
-
-
-# [6] Win32
-print("\n[6] Win32 API")
-def test_win32():
-    import ctypes
-    assert hasattr(ctypes.windll, "user32")
-    assert hasattr(ctypes.windll, "gdi32")
-run_test("Win32 API available", test_win32)
 
 
 # SUMMARY

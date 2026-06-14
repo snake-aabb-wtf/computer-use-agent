@@ -174,7 +174,7 @@ class Agent:
 
         self.history.append({"role": "user", "content": task})
 
-        # 启动涟漪效果（如果启用）
+        # 启动视觉效果（如果启用）
         if config.VISUAL_EFFECTS:
             try:
                 from .visual_effects import init_effects

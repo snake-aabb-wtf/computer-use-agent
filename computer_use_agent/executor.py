@@ -33,13 +33,35 @@ def _normalize_key(key: str) -> str:
     return _KEY_ALIASES.get(key.lower(), key.lower())
 
 
-def _trigger_ripple(x: int, y: int):
-    """Trigger visual ripple effect if enabled."""
+def _trigger_click(x: int, y: int):
+    """触发视觉点击效果。"""
     try:
         from . import config
         if config.VISUAL_EFFECTS:
-            from .visual_effects import trigger_ripple
-            trigger_ripple(x, y)
+            from .visual_effects import trigger_click
+            trigger_click(x, y)
+    except Exception:
+        pass
+
+
+def _trigger_drag(x1: int, y1: int, x2: int, y2: int):
+    """触发视觉拖拽效果。"""
+    try:
+        from . import config
+        if config.VISUAL_EFFECTS:
+            from .visual_effects import trigger_drag
+            trigger_drag(x1, y1, x2, y2)
+    except Exception:
+        pass
+
+
+def _show_action_info(action: str, thought: str = "", coords: str = ""):
+    """显示动作信息面板。"""
+    try:
+        from . import config
+        if config.VISUAL_EFFECTS:
+            from .visual_effects import show_action_info
+            show_action_info(action, thought, coords)
     except Exception:
         pass
 
@@ -163,24 +185,30 @@ def execute(action: dict) -> str:
     try:
         if act == "left_click":
             x, y = _resolve_click_target(action)
+            _show_action_info("Click", action.get("thought", ""), f"({x}, {y})")
+            _trigger_click(x, y)
+            time.sleep(0.15)
             pyautogui.click(x, y, button="left")
-            _trigger_ripple(x, y)
             if "element" in action:
                 return f"左键点击元素 #{action['element']} ({x}, {y})"
             return f"左键点击 ({x}, {y})"
 
         elif act == "double_click":
             x, y = _resolve_click_target(action)
+            _show_action_info("Double Click", action.get("thought", ""), f"({x}, {y})")
+            _trigger_click(x, y)
+            time.sleep(0.15)
             pyautogui.doubleClick(x, y)
-            _trigger_ripple(x, y)
             if "element" in action:
                 return f"双击元素 #{action['element']} ({x}, {y})"
             return f"双击 ({x}, {y})"
 
         elif act == "right_click":
             x, y = _resolve_click_target(action)
+            _show_action_info("Right Click", action.get("thought", ""), f"({x}, {y})")
+            _trigger_click(x, y)
+            time.sleep(0.15)
             pyautogui.rightClick(x, y)
-            _trigger_ripple(x, y)
             if "element" in action:
                 return f"右键点击元素 #{action['element']} ({x}, {y})"
             return f"右键点击 ({x}, {y})"
@@ -218,6 +246,9 @@ def execute(action: dict) -> str:
         elif act == "drag":
             fx, fy = action["from"]
             tx, ty = action["to"]
+            _show_action_info("Drag", action.get("thought", ""), f"({fx},{fy}) -> ({tx},{ty})")
+            _trigger_drag(fx, fy, tx, ty)
+            time.sleep(0.15)
             pyautogui.moveTo(fx, fy)
             pyautogui.drag(tx - fx, ty - fy, duration=0.3)
             return f"拖拽 ({fx},{fy}) → ({tx},{ty})"
