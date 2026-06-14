@@ -174,12 +174,11 @@ class Agent:
 
         self.history.append({"role": "user", "content": task})
 
-        # 启动呼吸边框（如果启用）
+        # 启动涟漪效果（如果启用）
         if config.VISUAL_EFFECTS:
             try:
-                from .visual_effects import init_effects, start_border
+                from .visual_effects import init_effects
                 init_effects(True)
-                start_border()
             except Exception:
                 pass
 

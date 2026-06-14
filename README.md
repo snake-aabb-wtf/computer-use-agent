@@ -176,7 +176,7 @@ VISUAL_EFFECTS=off
 | `SCREENSHOT_FORMAT` | `png` | Screenshot format |
 | `LOG_LEVEL` | `INFO` | Log level: DEBUG, INFO, WARNING, ERROR |
 | `LOG_DIR` | `logs` | Log directory |
-| `VISUAL_EFFECTS` | `off` | `on` to enable breathing border + mouse ripple |
+| `VISUAL_EFFECTS=off` | `on` to enable mouse ripple effect on clicks |
 
 ## Requirements
 

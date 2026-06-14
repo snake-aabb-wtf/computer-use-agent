@@ -176,7 +176,7 @@ VISUAL_EFFECTS=off
 | `SCREENSHOT_FORMAT` | `png` | 截图格式 |
 | `LOG_LEVEL` | `INFO` | 日志级别：DEBUG, INFO, WARNING, ERROR |
 | `LOG_DIR` | `logs` | 日志目录 |
-| `VISUAL_EFFECTS` | `off` | 设为 `on` 开启呼吸边框 + 鼠标涟漪效果 |
+| `VISUAL_EFFECTS` | `off` | 设为 `on` 开启鼠标点击涟漪效果 |
 
 ## 环境要求
 
