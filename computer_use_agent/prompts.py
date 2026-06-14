@@ -94,6 +94,7 @@ The screenshot has RED NUMBERED OVERLAYS on each interactable element. Use the e
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
 Modifiers for hotkey: ctrl, alt, shift, win
+Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling.
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
@@ -127,6 +128,7 @@ You interact with the desktop through these actions. Return ONE action per respo
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
 Modifiers for hotkey: ctrl, alt, shift, win
+Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling.
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
@@ -166,7 +168,8 @@ Coordinates are normalized to 0-1000 range. The backend converts them to actual 
 {"thought": "...", "action": "hotkey", "key": "ctrl c"}
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
-Modifiers for hotkey: ctrl, alt, shift, win (space-separated, lowercase, max 3 keys)
+Modifiers for hotkey: ctrl, alt, shift, win
+Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling. (space-separated, lowercase, max 3 keys)
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
