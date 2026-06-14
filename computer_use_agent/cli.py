@@ -413,7 +413,8 @@ def _print_action(step: int, action: dict, result: str):
     console.print(line)
 
     if thought:
-        console.print(f"      [{DIM}]{escape(thought)}[/{DIM}]")
+        from rich.markdown import Markdown
+        console.print(Markdown(thought, style=DIM))
 
 
 def _print_done(message: str, stats):
@@ -422,6 +423,12 @@ def _print_done(message: str, stats):
     text.append(f"{message}", style=f"bold {GREEN}")
     text.append(f"\n  {stats.summary()}", style=SILVER)
     console.print(Panel(text, border_style=GREEN, box=box.ROUNDED))
+
+    # 如果消息包含 markdown，渲染它
+    if any(marker in message for marker in ["**", "#", "- ", "```", "|"]):
+        console.print()
+        from rich.markdown import Markdown
+        console.print(Markdown(message))
 
 
 # ═══════════════════════════════════════════════════════════
