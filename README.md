@@ -36,17 +36,19 @@ python -m computer_use_agent "open notepad and type Hello World"
 
 ## Features
 
-### 🎯 Two Capture Modes
+### 🎯 Three Capture Modes
 
 | Mode | Description | Best For |
 |------|-------------|----------|
-| **SOM** (default) | Windows UIA element tree + numbered overlays | High-accuracy clicking |
+| **SOM** | Windows UIA element tree + numbered overlays | High-accuracy clicking |
 | **Vision** | Pure screenshot | All models, maximum compatibility |
+| **UITARS** | Coordinate normalization (0-1000) + action name normalization | UI-TARS style, cross-model |
 
 Switch in `.env`:
 ```env
 CAPTURE_MODE=som      # Element indexing (recommended)
 CAPTURE_MODE=vision   # Pure visual (compatible with all models)
+CAPTURE_MODE=uitars   # 0-1000 coord normalization (UI-TARS style)
 ```
 
 ### 🖱️ 12 Action Types
@@ -144,7 +146,7 @@ MAX_STEPS=200
 ACTION_DELAY=0.1
 REQUEST_TIMEOUT=60
 
-# Capture Mode: som | vision
+# Capture Mode: som | vision | uitars
 CAPTURE_MODE=som
 
 # Screenshots
@@ -171,7 +173,7 @@ VISUAL_EFFECTS=off
 | `MAX_STEPS` | `200` | Max agent steps per task |
 | `ACTION_DELAY` | `0.1` | Delay between actions in seconds |
 | `REQUEST_TIMEOUT` | `60` | API request timeout in seconds |
-| `CAPTURE_MODE` | `vision` | `som` (UIA element indexing) or `vision` (pure screenshot) |
+| `CAPTURE_MODE` | `vision` | `som` (UIA indexing), `vision` (pure screenshot), or `uitars` (0-1000 coord normalization) |
 | `SCREENSHOT_DIR` | `screenshots` | Directory to save screenshots |
 | `SCREENSHOT_FORMAT` | `png` | Screenshot format |
 | `LOG_LEVEL` | `INFO` | Log level: DEBUG, INFO, WARNING, ERROR |

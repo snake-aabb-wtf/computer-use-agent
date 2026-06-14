@@ -36,17 +36,19 @@ python -m computer_use_agent "打开记事本，输入 Hello World"
 
 ## 核心特性
 
-### 🎯 两种截图模式
+### 🎯 三种截图模式
 
 | 模式 | 说明 | 适用场景 |
 |------|------|----------|
-| **SOM**（默认） | Windows UIA 元素树 + 编号覆盖层 | 高精度点击 |
+| **SOM** | Windows UIA 元素树 + 编号覆盖层 | 高精度点击 |
 | **Vision** | 纯视觉截图 | 所有模型，最大兼容性 |
+| **UITARS** | 坐标归一化 (0-1000) + 动作名称归一化 | UI-TARS 风格，跨模型 |
 
 在 `.env` 中切换：
 ```env
 CAPTURE_MODE=som      # 元素索引模式（推荐）
 CAPTURE_MODE=vision   # 纯视觉模式（兼容所有模型）
+CAPTURE_MODE=uitars   # 坐标归一化 0-1000（UI-TARS 风格）
 ```
 
 ### 🖱️ 12 种操作类型
@@ -144,7 +146,7 @@ MAX_STEPS=200
 ACTION_DELAY=0.1
 REQUEST_TIMEOUT=60
 
-# 截图模式: som | vision
+# 截图模式: som | vision | uitars
 CAPTURE_MODE=som
 
 # 截图保存
@@ -171,7 +173,7 @@ VISUAL_EFFECTS=off
 | `MAX_STEPS` | `200` | 单个任务最大步数 |
 | `ACTION_DELAY` | `0.1` | 操作间延迟（秒） |
 | `REQUEST_TIMEOUT` | `60` | API 请求超时（秒） |
-| `CAPTURE_MODE` | `vision` | `som`（UIA 元素索引）或 `vision`（纯视觉） |
+| `CAPTURE_MODE` | `vision` | `som`（UIA 元素索引）、`vision`（纯视觉）或 `uitars`（0-1000 坐标归一化） |
 | `SCREENSHOT_DIR` | `screenshots` | 截图保存目录 |
 | `SCREENSHOT_FORMAT` | `png` | 截图格式 |
 | `LOG_LEVEL` | `INFO` | 日志级别：DEBUG, INFO, WARNING, ERROR |
