@@ -107,7 +107,14 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
 {"thought": "...", "action": "screenshot"}
-{"thought": "...", "action": "done", "message": "why the task is complete"}"""
+{"thought": "...", "action": "done", "message": "why the task is complete"}
+
+## When to wait
+- After clicking a link/button that loads a page: wait 2-5s
+- After triggering a download: wait 3-10s
+- After submitting a form: wait 2-3s
+- When waiting for an animation or transition: wait 1-2s
+- Use screenshot after wait to verify the result"""
 
 
 TOOL_GUIDANCE_VISION = """# Available Actions (Vision Mode)
@@ -142,7 +149,14 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
 {"thought": "...", "action": "screenshot"}
-{"thought": "...", "action": "done", "message": "why the task is complete"}"""
+{"thought": "...", "action": "done", "message": "why the task is complete"}
+
+## When to wait
+- After clicking a link/button that loads a page: wait 2-5s
+- After triggering a download: wait 3-10s
+- After submitting a form: wait 2-3s
+- When waiting for an animation or transition: wait 1-2s
+- Use screenshot after wait to verify the result"""
 
 
 # 借鉴 UI-TARS: 坐标归一化模式
@@ -183,7 +197,14 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 {"thought": "...", "action": "wait", "seconds": 2}
 {"thought": "...", "action": "screenshot"}
 {"thought": "...", "action": "done", "message": "why the task is complete"}
-{"thought": "...", "action": "finished", "message": "alternative to done"}"""
+{"thought": "...", "action": "finished", "message": "alternative to done"}
+
+## When to wait
+- After clicking a link/button that loads a page: wait 2-5s
+- After triggering a download: wait 3-10s
+- After submitting a form: wait 2-3s
+- When waiting for an animation or transition: wait 1-2s
+- Use screenshot after wait to verify the result"""
 
 
 OUTPUT_FORMAT = """# Output Format
