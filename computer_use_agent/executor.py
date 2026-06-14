@@ -1,4 +1,9 @@
-"""动作执行器 - 12 种桌面操作"""
+"""动作执行器 - 12 种桌面操作
+
+借鉴 UI-TARS:
+- 动作名称归一化 (60+ 变体 -> 20 标准名)
+- 坐标归一化 (0-1000 -> 实际像素)
+"""
 
 import time
 import subprocess
@@ -6,9 +11,69 @@ import platform
 import pyautogui
 
 # pyautogui 安全设置
-pyautogui.FAILSAFE = False  # 不启用左上角安全退出
-pyautogui.PAUSE = 0  # 不自动延迟
+pyautogui.FAILSAFE = False
+pyautogui.PAUSE = 0
 
+# ═══════════════════════════════════════════════════════════
+# 动作名称归一化 (借鉴 UI-TARS actionTypeMap)
+# ═══════════════════════════════════════════════════════════
+
+_ACTION_MAP = {
+    "click": "left_click", "left_click": "left_click", "left_single": "left_click",
+    "leftsingle": "left_click", "leftclick": "left_click",
+    "double_click": "double_click", "left_double": "double_click",
+    "doubleclick": "double_click", "leftdouble": "double_click",
+    "right_click": "right_click", "right_single": "right_click",
+    "rightsingle": "right_click", "rightclick": "right_click",
+    "type": "type", "input": "type", "typewrite": "type",
+    "key": "key", "press": "key", "presskey": "key",
+    "hotkey": "hotkey", "hot_key": "hotkey", "keycombo": "hotkey", "key_combo": "hotkey",
+    "scroll": "scroll", "mouse_scroll": "scroll",
+    "move": "move", "mouse_move": "move", "moveto": "move", "move_to": "move", "hover": "move",
+    "drag": "drag", "mouse_drag": "drag", "dragto": "drag", "drag_to": "drag",
+    "wait": "wait", "sleep": "wait", "pause": "wait",
+    "screenshot": "screenshot", "capture": "screenshot",
+    "done": "done", "finished": "done", "complete": "done", "finish": "done", "call_user": "done",
+}
+
+
+def normalize_action(action: dict) -> dict:
+    """归一化动作名称和坐标 (借鉴 UI-TARS)。"""
+    act = action.get("action", "")
+    normalized = _ACTION_MAP.get(act.lower(), act)
+    if normalized != act:
+        action = dict(action)
+        action["action"] = normalized
+
+    # 坐标归一化: 浮点数 0-1000 -> 实际像素
+    if "coordinate" in action:
+        coord = action["coordinate"]
+        if isinstance(coord, (list, tuple)) and len(coord) == 2:
+            x, y = coord
+            if isinstance(x, float) or isinstance(y, float):
+                sw, sh = pyautogui.size()
+                action = dict(action)
+                action["coordinate"] = [int(x / 1000 * sw), int(y / 1000 * sh)]
+
+    if "from" in action and "to" in action:
+        fr = action["from"]
+        to = action["to"]
+        if isinstance(fr, (list, tuple)) and isinstance(to, (list, tuple)):
+            sw, sh = pyautogui.size()
+            new_from, new_to = list(fr), list(to)
+            if isinstance(fr[0], float) or isinstance(fr[1], float):
+                new_from = [int(fr[0] / 1000 * sw), int(fr[1] / 1000 * sh)]
+            if isinstance(to[0], float) or isinstance(to[1], float):
+                new_to = [int(to[0] / 1000 * sw), int(to[1] / 1000 * sh)]
+            if new_from != list(fr) or new_to != list(to):
+                action = dict(action)
+                action["from"] = new_from
+                action["to"] = new_to
+
+    return action
+
+
+# ═══════════════════════════════════════════════════════════
 # 按键别名映射
 _KEY_ALIASES = {
     "return": "enter",
@@ -179,6 +244,11 @@ def execute(action: dict) -> str:
     Returns:
         执行结果的文字描述
     """
+    # 借鉴 UI-TARS: 仅在 uitars 模式下归一化
+    from . import config
+    if config.CAPTURE_MODE == "uitars":
+        action = normalize_action(action)
+
     act = action.get("action", "")
     thought = action.get("thought", "")
 

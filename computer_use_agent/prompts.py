@@ -142,6 +142,45 @@ Modifiers for hotkey: ctrl, alt, shift, win
 {"thought": "...", "action": "done", "message": "why the task is complete"}"""
 
 
+# 借鉴 UI-TARS: 坐标归一化模式
+TOOL_GUIDANCE_UITARS = """# Available Actions (UI-TARS Mode)
+
+You interact with the desktop through these actions. Return ONE action per response as a JSON object.
+
+## Coordinate System (IMPORTANT)
+Coordinates are normalized to 0-1000 range. The backend converts them to actual screen pixels.
+- (0, 0) = top-left corner
+- (1000, 1000) = bottom-right corner
+- (500, 500) = center of screen
+
+## Click Actions
+{"thought": "...", "action": "click", "coordinate": [x, y]}
+{"thought": "...", "action": "double_click", "coordinate": [x, y]}
+{"thought": "...", "action": "right_click", "coordinate": [x, y]}
+
+## Text Input
+{"thought": "...", "action": "type", "text": "text to type"}
+
+## Keyboard
+{"thought": "...", "action": "hotkey", "key": "ctrl c"}
+
+Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
+Modifiers for hotkey: ctrl, alt, shift, win (space-separated, lowercase, max 3 keys)
+
+## Scroll
+{"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
+
+## Mouse
+{"thought": "...", "action": "move", "coordinate": [x, y]}
+{"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2]}
+
+## Control
+{"thought": "...", "action": "wait", "seconds": 2}
+{"thought": "...", "action": "screenshot"}
+{"thought": "...", "action": "done", "message": "why the task is complete"}
+{"thought": "...", "action": "finished", "message": "alternative to done"}"""
+
+
 OUTPUT_FORMAT = """# Output Format
 
 Return EXACTLY ONE JSON object per response. No other text, no markdown, no explanations outside the JSON.
@@ -242,9 +281,14 @@ def build_environment_context(screen_width: int = 0, screen_height: int = 0) -> 
 # ═══════════════════════════════════════════════════════════
 
 def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
-    """组装系统提示词。根据 capture_mode 切换 SOM/Vision 模式指引。"""
+    """组装系统提示词。根据 capture_mode 切换模式指引。"""
     # 根据模式选择对应的工具指引
-    tool_guidance = TOOL_GUIDANCE_SOM if capture_mode == "som" else TOOL_GUIDANCE_VISION
+    tool_guidance_map = {
+        "som": TOOL_GUIDANCE_SOM,
+        "vision": TOOL_GUIDANCE_VISION,
+        "uitars": TOOL_GUIDANCE_UITARS,
+    }
+    tool_guidance = tool_guidance_map.get(capture_mode, TOOL_GUIDANCE_VISION)
 
     parts = [
         IDENTITY,

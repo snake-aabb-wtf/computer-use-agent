@@ -93,6 +93,30 @@ class SessionStats:
         )
 
 
+# ── 借鉴 UI-TARS: 图片滑动窗口 ──
+
+def _slide_image_window(history: list[dict], max_images: int = 5) -> list[dict]:
+    """借鉴 UI-TARS 的图片滑动窗口。
+
+    只保留最近 N 张截图，防止上下文溢出。
+    """
+    image_indices = []
+    for i, msg in enumerate(history):
+        if msg.get("role") == "user":
+            content = msg.get("content", "")
+            if isinstance(content, list):
+                for part in content:
+                    if isinstance(part, dict) and part.get("type") == "image_url":
+                        image_indices.append(i)
+                        break
+
+    if len(image_indices) > max_images:
+        to_remove = set(image_indices[:len(image_indices) - max_images])
+        history = [msg for i, msg in enumerate(history) if i not in to_remove]
+
+    return history
+
+
 # ── Agent 主类 ──
 
 class Agent:
@@ -150,18 +174,21 @@ class Agent:
     def _prepare_messages(self) -> list[dict]:
         """API 调用前的消息准备流水线。
 
-        借鉴 Hermes conversation_loop.py line 945-1084:
-        1. 消息序列修复（角色交替/孤儿消息）
-        2. 预算强制执行
-        3. 最终净化
+        借鉴:
+        - Hermes: 消息序列修复、预算强制执行、最终净化
+        - UI-TARS: 图片滑动窗口 (仅 uitars 模式)
         """
         # 1. 修复消息序列
         self.history = repair_message_sequence(self.history)
 
-        # 2. 强制执行预算
+        # 2. 借鉴 UI-TARS: 图片滑动窗口 (仅 uitars 模式)
+        if config.CAPTURE_MODE == "uitars":
+            self.history = _slide_image_window(self.history, max_images=5)
+
+        # 3. 强制执行预算
         self.history = enforce_history_budget(self.history)
 
-        # 3. 最终净化
+        # 4. 最终净化
         messages = sanitize_api_messages(self.history)
 
         return messages

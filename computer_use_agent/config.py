@@ -27,6 +27,8 @@ ACTION_DELAY = _float("ACTION_DELAY", 0.1)
 REQUEST_TIMEOUT = _int("REQUEST_TIMEOUT", 60)
 
 CAPTURE_MODE = _str("CAPTURE_MODE", "vision")
+if CAPTURE_MODE not in ("som", "vision", "uitars"):
+    CAPTURE_MODE = "vision"
 
 SCREENSHOT_DIR = _str("SCREENSHOT_DIR", "screenshots")
 SCREENSHOT_FORMAT = _str("SCREENSHOT_FORMAT", "png")

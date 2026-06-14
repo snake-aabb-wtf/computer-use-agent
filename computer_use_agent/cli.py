@@ -321,8 +321,13 @@ def _print_banner():
     info.add_row("Screen", f"{w}x{h}")
     info.add_row("Max Steps", str(config.MAX_STEPS))
     info.add_row("Action Delay", f"{config.ACTION_DELAY}s")
-    capture_label = f"{config.CAPTURE_MODE.upper()} (SOM + UIA)" if config.CAPTURE_MODE == "som" else "VISION (pure screenshot)"
-    info.add_row("Capture Mode", f"[{GREEN if config.CAPTURE_MODE == 'som' else CYAN}]{capture_label}[/]")
+    capture_labels = {
+        "som": (GREEN, "SOM (UIA element indexing)"),
+        "vision": (CYAN, "VISION (pure screenshot)"),
+        "uitars": (ORANGE, "UITARS (0-1000 coord normalization)"),
+    }
+    color, label = capture_labels.get(config.CAPTURE_MODE, (CYAN, config.CAPTURE_MODE))
+    info.add_row("Capture Mode", f"[{color}]{label}[/]")
     console.print(Panel(info, title=f"[{GOLD}]Session[/{GOLD}]", border_style=BRONZE))
     console.print(f"  [{DIM}]Alt+Enter for newline | /help for commands[/{DIM}]\n")
 
