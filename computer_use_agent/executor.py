@@ -33,6 +33,17 @@ def _normalize_key(key: str) -> str:
     return _KEY_ALIASES.get(key.lower(), key.lower())
 
 
+def _trigger_ripple(x: int, y: int):
+    """Trigger visual ripple effect if enabled."""
+    try:
+        from . import config
+        if config.VISUAL_EFFECTS:
+            from .visual_effects import trigger_ripple
+            trigger_ripple(x, y)
+    except Exception:
+        pass
+
+
 # SOM 元素缓存 - 由 agent.py 设置
 _som_elements: list = []
 
@@ -153,6 +164,7 @@ def execute(action: dict) -> str:
         if act == "left_click":
             x, y = _resolve_click_target(action)
             pyautogui.click(x, y, button="left")
+            _trigger_ripple(x, y)
             if "element" in action:
                 return f"左键点击元素 #{action['element']} ({x}, {y})"
             return f"左键点击 ({x}, {y})"
@@ -160,6 +172,7 @@ def execute(action: dict) -> str:
         elif act == "double_click":
             x, y = _resolve_click_target(action)
             pyautogui.doubleClick(x, y)
+            _trigger_ripple(x, y)
             if "element" in action:
                 return f"双击元素 #{action['element']} ({x}, {y})"
             return f"双击 ({x}, {y})"
@@ -167,6 +180,7 @@ def execute(action: dict) -> str:
         elif act == "right_click":
             x, y = _resolve_click_target(action)
             pyautogui.rightClick(x, y)
+            _trigger_ripple(x, y)
             if "element" in action:
                 return f"右键点击元素 #{action['element']} ({x}, {y})"
             return f"右键点击 ({x}, {y})"

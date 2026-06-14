@@ -138,6 +138,15 @@ class Agent:
         with self._activity_lock:
             return (time.time() - self._last_activity) > timeout
 
+    def _stop_effects(self):
+        """停止视觉效果。"""
+        try:
+            from .visual_effects import stop_border, cleanup
+            stop_border()
+            cleanup()
+        except Exception:
+            pass
+
     def _prepare_messages(self) -> list[dict]:
         """API 调用前的消息准备流水线。
 
@@ -165,10 +174,21 @@ class Agent:
 
         self.history.append({"role": "user", "content": task})
 
+        # 启动呼吸边框（如果启用）
+        if config.VISUAL_EFFECTS:
+            try:
+                from .visual_effects import init_effects, start_border
+                init_effects(True)
+                start_border()
+            except Exception:
+                pass
+
         for step in range(1, config.MAX_STEPS + 1):
             # 借鉴: 中断检查点 (200ms 间隔)
             if self._interrupted:
                 self.logger.warning("⏹ Interrupted by user")
+                if config.VISUAL_EFFECTS:
+                    self._stop_effects()
                 return "已中断"
 
             self.logger.info(f"\n{'─'*50}")
@@ -242,6 +262,8 @@ class Agent:
                 msg = action.get("message", "Task completed")
                 self.logger.info(f"\n✅ {msg}")
                 self.logger.info(f"   {self.stats.summary()}")
+                if config.VISUAL_EFFECTS:
+                    self._stop_effects()
                 return msg
 
             # 7. 执行动作
@@ -315,4 +337,6 @@ class Agent:
 
         self.logger.warning(f"⚠ Max steps {config.MAX_STEPS} reached")
         self.logger.info(f"   {self.stats.summary()}")
+        if config.VISUAL_EFFECTS:
+            self._stop_effects()
         return f"Max steps {config.MAX_STEPS} reached"

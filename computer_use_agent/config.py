@@ -33,3 +33,6 @@ SCREENSHOT_FORMAT = _str("SCREENSHOT_FORMAT", "png")
 
 LOG_LEVEL = _str("LOG_LEVEL", "INFO")
 LOG_DIR = _str("LOG_DIR", "logs")
+
+# Visual effects (experimental)
+VISUAL_EFFECTS = _str("VISUAL_EFFECTS", "off") == "on"
