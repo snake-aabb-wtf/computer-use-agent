@@ -113,6 +113,12 @@ TOOL_GUIDANCE_VISION = """# Available Actions (Vision Mode)
 
 You interact with the desktop through these actions. Return ONE action per response as a JSON object.
 
+## Coordinate System (IMPORTANT)
+Coordinates are normalized to 0-1000 range. The backend converts them to actual screen pixels.
+- (0, 0) = top-left corner
+- (1000, 1000) = bottom-right corner
+- (500, 500) = center of screen
+
 ## Click Actions
 {"thought": "...", "action": "left_click", "coordinate": [x, y]}
 {"thought": "...", "action": "double_click", "coordinate": [x, y]}
@@ -139,7 +145,8 @@ Modifiers for hotkey: ctrl, alt, shift, win
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
 {"thought": "...", "action": "screenshot"}
-{"thought": "...", "action": "done", "message": "why the task is complete"}"""
+{"thought": "...", "action": "done", "message": "why the task is complete"}
+{"thought": "...", "action": "finished", "message": "alternative to done"}"""
 
 
 OUTPUT_FORMAT = """# Output Format
