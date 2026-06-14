@@ -321,6 +321,8 @@ def _print_banner():
     info.add_row("Screen", f"{w}x{h}")
     info.add_row("Max Steps", str(config.MAX_STEPS))
     info.add_row("Action Delay", f"{config.ACTION_DELAY}s")
+    capture_label = f"{config.CAPTURE_MODE.upper()} (SOM + UIA)" if config.CAPTURE_MODE == "som" else "VISION (pure screenshot)"
+    info.add_row("Capture Mode", f"[{GREEN if config.CAPTURE_MODE == 'som' else CYAN}]{capture_label}[/]")
     console.print(Panel(info, title=f"[{GOLD}]Session[/{GOLD}]", border_style=BRONZE))
     console.print(f"  [{DIM}]Alt+Enter for newline | /help for commands[/{DIM}]\n")
 
