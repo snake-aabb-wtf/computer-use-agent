@@ -856,6 +856,13 @@ class CLI:
 
         total_time = time.time() - t0
 
+        # 通知用户任务完成：窗口前置 + 提示音
+        try:
+            from .notify import notify_completion
+            notify_completion()
+        except Exception:
+            pass
+
         _print_done(result, self.agent.stats)
         console.print(f"  [{DIM}]Total: {total_time:.1f}s[/{DIM}]\n")
 
