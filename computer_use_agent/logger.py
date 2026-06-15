@@ -58,6 +58,7 @@ class _ColorFormatter(logging.Formatter):
 
 def log_action(logger: logging.Logger, step: int, action: dict, result: str):
     """记录一个动作的执行结果。"""
+    reason = action.get("reason", "")
     thought = action.get("thought", "")
     act = action.get("action", "?")
     elapsed = action.get("_elapsed", 0)
@@ -68,8 +69,10 @@ def log_action(logger: logging.Logger, step: int, action: dict, result: str):
         f"STEP {step:03d} | {act} | {result} | "
         f"LLM {elapsed}s ({tokens_in}→{tokens_out} tokens)"
     )
+    if reason:
+        logger.info(f"  💡 {reason}")
     if thought:
-        logger.debug(f"  💭 {thought}")
+        logger.debug(f"  🧠 {thought}")
 
 
 def log_action_json(logger: logging.Logger, step: int, action: dict):
