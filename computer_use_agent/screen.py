@@ -17,34 +17,39 @@ from . import config
 # ═══════════════════════════════════════════════════════════
 
 def _draw_grid(img: Image.Image, spacing: int = 200) -> Image.Image:
-    """在截图上画半透明网格线，给模型提供坐标参考。
-
-    每 spacing 像素画一条线，线上标注坐标值。
-    """
+    """在截图上画网格线，给模型提供坐标参考。"""
     overlay = img.copy()
     draw = ImageDraw.Draw(overlay, "RGBA")
     w, h = img.size
 
-    # 尝试加载字体
     try:
-        font = ImageFont.truetype("arial.ttf", 11)
+        font = ImageFont.truetype("arial.ttf", 12)
     except (OSError, IOError):
         font = ImageFont.load_default()
 
-    grid_color = (100, 100, 100, 80)  # 半透明灰色
-    text_color = (150, 150, 150, 120)
+    grid_color = (255, 255, 255, 120)  # 白色半透明
+    text_bg = (0, 0, 0, 160)           # 黑色背景
+    text_color = (255, 255, 255, 255)  # 白色文字
 
     # 画竖线 + 顶部坐标标注
     for x in range(spacing, w, spacing):
         draw.line([(x, 0), (x, h)], fill=grid_color, width=1)
         label = str(x)
-        draw.text((x + 2, 2), label, fill=text_color, font=font)
+        bbox = font.getbbox(label)
+        lw = bbox[2] - bbox[0] + 4
+        lh = bbox[3] - bbox[1] + 4
+        draw.rectangle([x+1, 1, x+1+lw, 1+lh], fill=text_bg)
+        draw.text((x+3, 2), label, fill=text_color, font=font)
 
     # 画横线 + 左侧坐标标注
     for y in range(spacing, h, spacing):
         draw.line([(0, y), (w, y)], fill=grid_color, width=1)
         label = str(y)
-        draw.text((2, y + 2), label, fill=text_color, font=font)
+        bbox = font.getbbox(label)
+        lw = bbox[2] - bbox[0] + 4
+        lh = bbox[3] - bbox[1] + 4
+        draw.rectangle([1, y+1, 1+lw, y+1+lh], fill=text_bg)
+        draw.text((3, y+2), label, fill=text_color, font=font)
 
     return overlay
 
