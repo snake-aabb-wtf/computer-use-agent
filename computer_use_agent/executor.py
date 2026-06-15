@@ -324,12 +324,21 @@ def execute(action: dict) -> str:
         elif act == "drag":
             fx, fy = action["from"]
             tx, ty = action["to"]
+            hold_time = action.get("hold", 0.3)
             _show_action_info("Drag", action.get("thought", ""), f"({fx},{fy}) -> ({tx},{ty})")
             _trigger_drag(fx, fy, tx, ty)
-            time.sleep(0.15)
+            # 借鉴 UI-TARS: 自然拖拽 - 移动→按住→停留→逐步移动→松开
             pyautogui.moveTo(fx, fy)
-            pyautogui.drag(tx - fx, ty - fy, duration=0.3)
-            return f"拖拽 ({fx},{fy}) → ({tx},{ty})"
+            pyautogui.mouseDown()
+            time.sleep(hold_time)
+            steps = 10
+            for i in range(1, steps + 1):
+                cx = fx + (tx - fx) * i / steps
+                cy = fy + (ty - fy) * i / steps
+                pyautogui.moveTo(cx, cy)
+                time.sleep(0.02)
+            pyautogui.mouseUp()
+            return f"拖拽 ({fx},{fy}) → ({tx},{ty}) hold={hold_time}s"
 
         elif act == "wait":
             seconds = action.get("seconds", 1)

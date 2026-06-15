@@ -105,6 +105,7 @@ Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete mult
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
 {"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2]}
+{"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2], "hold": 0.5}
 
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
@@ -150,6 +151,7 @@ Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete mult
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
 {"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2]}
+{"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2], "hold": 0.5}
 
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
@@ -198,6 +200,7 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
 {"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2]}
+{"thought": "...", "action": "drag", "from": [x1, y1], "to": [x2, y2], "hold": 0.5}
 
 ## Control
 {"thought": "...", "action": "wait", "seconds": 2}
