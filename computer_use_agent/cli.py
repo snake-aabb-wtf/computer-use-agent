@@ -407,16 +407,32 @@ def _print_action(step: int, action: dict, result: str):
     }
     color = act_colors.get(act, SILVER)
 
+    # 借鉴 Hermes: 工具完成消息 ┊ emoji verb result elapsed
+    _TOOL_EMOJIS = {
+        "left_click": "👆", "double_click": "👆👆", "right_click": "🖱️",
+        "type": "⌨️", "key": "⌨️", "hotkey": "⌨️",
+        "scroll": "📜", "move": "🖱️", "drag": "↔️",
+        "wait": "⏳", "screenshot": "📸", "done": "✅",
+    }
+    _TOOL_VERBS = {
+        "left_click": "click", "double_click": "double-click", "right_click": "right-click",
+        "type": "type", "key": "press", "hotkey": "hotkey",
+        "scroll": "scroll", "move": "move", "drag": "drag",
+        "wait": "wait", "screenshot": "capture", "done": "done",
+    }
+    emoji = _TOOL_EMOJIS.get(act, "🔧")
+    verb = _TOOL_VERBS.get(act, act)
+
+    # 借鉴 Hermes: ┊ emoji verb result elapsed
     line = Text()
-    line.append(f"  [{step:02d}] ", style=DIM)
-    line.append(f"{act}", style=f"bold {color}")
-    line.append(f"  {result}", style=SILVER)
-    line.append(f"  ({elapsed}s, {tokens_in}→{tokens_out}tok)", style=DIM)
+    line.append(f"  {emoji} {verb:10} ", style=f"bold {color}")
+    line.append(f"{result}", style=SILVER)
+    line.append(f"  {elapsed:.1f}s ({tokens_in}→{tokens_out}tok)", style=DIM)
     console.print(line)
 
-    # 显示 reason（用户可见的解释）
+    # 借鉴 Hermes: reason 显示（用户可见）
     if reason:
-        console.print(f"  💡 [{CYAN}]{escape(reason)}[/{CYAN}]")
+        console.print(f"     [{CYAN}]{escape(reason)}[/{CYAN}]")
 
     if thought:
         from rich.markdown import Markdown
