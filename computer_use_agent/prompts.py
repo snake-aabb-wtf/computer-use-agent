@@ -282,15 +282,20 @@ Return EXACTLY ONE JSON object per response. No other text, no markdown, no expl
 
 ```json
 {
-  "thought": "Brief analysis of what you see and why you're taking this action",
+  "reason": "What you plan to do and why (user-facing explanation)",
+  "thought": "Internal analysis of screen state and coordinates",
   "action": "action_type",
   ...action-specific parameters...
 }
 ```
 
-The `thought` field is REQUIRED for every action. Use it to explain:
+The `reason` field is REQUIRED. It is what the user sees on screen. Explain:
+1. What you are about to do
+2. Why you chose this action
+
+The `thought` field is REQUIRED. It is your internal reasoning about:
 1. What you currently see on screen
-2. Why you chose this specific action
+2. How you determined the coordinates
 3. What you expect to happen next"""
 
 

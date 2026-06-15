@@ -393,6 +393,7 @@ def _print_usage(agent: Agent):
 
 def _print_action(step: int, action: dict, result: str):
     act = action.get("action", "?")
+    reason = action.get("reason", "")
     thought = action.get("thought", "")
     elapsed = action.get("_elapsed", 0)
     tokens_in = action.get("_tokens_in", 0)
@@ -412,6 +413,10 @@ def _print_action(step: int, action: dict, result: str):
     line.append(f"  {result}", style=SILVER)
     line.append(f"  ({elapsed}s, {tokens_in}→{tokens_out}tok)", style=DIM)
     console.print(line)
+
+    # 显示 reason（用户可见的解释）
+    if reason:
+        console.print(f"  💡 [{CYAN}]{escape(reason)}[/{CYAN}]")
 
     if thought:
         from rich.markdown import Markdown
