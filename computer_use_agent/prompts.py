@@ -148,10 +148,26 @@ TOOL_GUIDANCE_VISION = """# Available Actions (Vision Mode)
 
 You interact with the desktop through these actions. Return ONE action per response as a JSON object.
 
+## Coordinate System (Anchor Points)
+- Screen origin is top-left: (0, 0)
+- Screen bounds: (0, 0) to (SCREEN_WIDTH, SCREEN_HEIGHT)
+- Screen CENTER: (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
+- Top bar area: y < 50
+- Taskbar area: y > SCREEN_HEIGHT - 50
+- Left sidebar: x < 200
+- Main content area: x > 200, y < SCREEN_HEIGHT - 50
+
 ## Click Actions
 {"thought": "...", "action": "left_click", "coordinate": [x, y]}
 {"thought": "...", "action": "double_click", "coordinate": [x, y]}
 {"thought": "...", "action": "right_click", "coordinate": [x, y]}
+
+## Click Accuracy Rules
+1. ALWAYS describe WHAT you are clicking in the thought field before clicking
+2. Click at the CENTER of buttons/elements, not edges or corners
+3. For small targets (icons, close buttons), be extra precise
+4. After clicking, ALWAYS take a screenshot to verify the result
+5. If unsure about coordinates, use "move" to hover first, then screenshot to confirm
 
 ## Text Input
 {"thought": "...", "action": "type", "text": "text to type"}
@@ -163,13 +179,10 @@ You interact with the desktop through these actions. Return ONE action per respo
 
 Available keys: enter, tab, escape, space, backspace, delete, home, end, pageup, pagedown, up, down, left, right, f1-f12, a-z, 0-9
 Modifiers for hotkey: ctrl, alt, shift, win
-Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise scrolling.
-Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete multiple chars).
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
-- amount: 1=small, 3=medium, 5=full-page, 10=2x full-page
-- Each amount unit = 5 scroll clicks
+- amount: 1=small, 3=medium, 5=half-page, 10=full-page
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
@@ -181,13 +194,20 @@ Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete mult
 {"thought": "...", "action": "screenshot"}
 {"thought": "...", "action": "done", "message": "why the task is complete"}
 
+## Error Recovery
+- Click missed target? Check screen bounds, try adjusted coordinates
+- Clicked wrong element? Ctrl+Z to undo, or close the dialog
+- Nothing happened? Take screenshot to reassess
+- Text input not working? Click field first, then type
+- Same action failed 3 times? STOP and report
+- Unexpected window/dialog? Screenshot first, then decide
+
 ## When to wait
-- After clicking a link/button that loads a page: wait 2-5s
-- After triggering a download: wait 60-300s (1-5 minutes), then screenshot to check
+- After clicking link/button that loads a page: wait 2-5s
+- After triggering a download: wait 60-300s, then screenshot
 - After submitting a form: wait 2-3s
-- When waiting for an animation or transition: wait 1-2s
-- For large file downloads: wait up to 600s (10 minutes), screenshot to verify
-- Use screenshot after wait to verify the result"""
+- When waiting for animation/transition: wait 1-2s
+- For large file downloads: wait up to 600s, screenshot to verify"""
 
 
 # 借鉴 UI-TARS: 坐标归一化模式
