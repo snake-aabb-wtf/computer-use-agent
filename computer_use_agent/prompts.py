@@ -123,7 +123,7 @@ Tip: Use hold parameter to hold a key (e.g. hold backspace for 2s to delete mult
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
-- amount: 1=small, 3=medium, 5=half-page, 10=full-page
+- amount: 1=small, 3=medium, 5=full-page, 10=3x full-page
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
@@ -182,7 +182,7 @@ Modifiers for hotkey: ctrl, alt, shift, win
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
-- amount: 1=small, 3=medium, 5=half-page, 10=full-page
+- amount: 1=small, 3=medium, 5=full-page, 10=3x full-page
 
 ## Mouse
 {"thought": "...", "action": "move", "coordinate": [x, y]}
