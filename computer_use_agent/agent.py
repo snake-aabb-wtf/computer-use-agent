@@ -220,11 +220,11 @@ class Agent:
             self.logger.info(f"\n{'─'*50}")
             self.logger.info(f"📸 Step {step}/{config.MAX_STEPS}")
 
-            # 借鉴: 定期重新注入原始任务，防止上下文漂移
+            # 借鉴: 定期重新注入当前任务，防止上下文漂移
             if step > 1 and step % 10 == 0:
                 self.history.append({
                     "role": "user",
-                    "content": f"[Reminder] The original task is: \"{task}\". Continue working toward this goal.",
+                    "content": f"[Task Reminder] Your current task is: \"{task}\". Do NOT deviate to other tasks. If the task is done, return done.",
                 })
 
             # 1. 截图
