@@ -257,7 +257,23 @@ Tip: Use pageup/pagedown for large scroll steps, or scroll action for precise sc
 - After submitting a form: wait 2-3s
 - When waiting for an animation or transition: wait 1-2s
 - For large file downloads: wait up to 600s (10 minutes), screenshot to verify
-- Use screenshot after wait to verify the result"""
+- Use screenshot after wait to verify the result
+
+## Useful Tricks
+- Clear an input field: Ctrl+A then Backspace (select all, then delete)
+- Undo last action: Ctrl+Z
+- Select all text in a field: Ctrl+A
+- Copy selected text: Ctrl+C
+- Paste from clipboard: Ctrl+V
+- Switch between windows: Alt+Tab
+- Open Task Manager: Ctrl+Shift+Esc
+- Minimize current window: Win+Down
+- Maximize current window: Win+Up
+- Close current tab: Ctrl+W (browser)
+- Reopen closed tab: Ctrl+Shift+T (browser)
+- Open file explorer: Win+E
+- Open Run dialog: Win+R
+- Focus the taskbar: Win+T"""
 
 
 OUTPUT_FORMAT = """# Output Format
