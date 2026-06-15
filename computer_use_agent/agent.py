@@ -220,6 +220,13 @@ class Agent:
             self.logger.info(f"\n{'─'*50}")
             self.logger.info(f"📸 Step {step}/{config.MAX_STEPS}")
 
+            # 借鉴: 定期重新注入原始任务，防止上下文漂移
+            if step > 1 and step % 10 == 0:
+                self.history.append({
+                    "role": "user",
+                    "content": f"[Reminder] The original task is: \"{task}\". Continue working toward this goal.",
+                })
+
             # 1. 截图
             self._touch_activity("screenshot")
             if config.CAPTURE_MODE == "som":

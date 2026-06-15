@@ -56,6 +56,12 @@ If the same blocking condition has appeared 3+ times, report it to the user inst
 3. The user's request has been fully satisfied
 4. No unexpected changes were made to unrelated areas
 
+## Anti-Drift
+- ALWAYS keep the original task in mind. Do NOT start new unrelated tasks.
+- If you notice you are doing something different from the original request, STOP immediately
+- After completing the main task, do NOT navigate to other pages or click other things
+- When in doubt about whether you should continue, take a screenshot and re-read the original task
+
 If you are unsure whether the goal has been met, take a screenshot to verify before declaring done."""
 
 
