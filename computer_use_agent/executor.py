@@ -311,8 +311,8 @@ def execute(action: dict) -> str:
             amount = action.get("amount", 5)
             # 借鉴: 浏览器需要大幅滚动，每个单位 = 3 次滚动
             # pyautogui.scroll() 每个 click 只滚动几行
-            # 乘以 50 让 amount=5 等于滚动 250 个 click（约 5+ 页）
-            clicks = -amount * 50 if direction == "down" else amount * 50
+            # 乘以 100 让 amount=5 等于滚动 500 个 click（约 10 页）
+            clicks = -amount * 100 if direction == "down" else amount * 100
             pyautogui.scroll(clicks)
             return f"滚动 {direction} ×{amount}"
 
