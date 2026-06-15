@@ -195,6 +195,16 @@ def chat(
 
             return _parse_action(raw, elapsed, tokens_in, tokens_out)
 
+        except KeyboardInterrupt:
+            if logger:
+                logger.warning("\n  ⚠ Interrupted by user (Ctrl+C)")
+            return {
+                "thought": "用户中断",
+                "action": "done",
+                "message": "已中断",
+                "_interrupted": True,
+            }
+
         except Exception as e:
             last_error = e
             classified = _classify_error(e)
