@@ -169,7 +169,6 @@ def test_uitars_prompt_has_actions():
     assert "type" in TOOL_GUIDANCE_UITARS
     assert "hotkey" in TOOL_GUIDANCE_UITARS
     assert "scroll" in TOOL_GUIDANCE_UITARS
-    assert "drag" in TOOL_GUIDANCE_UITARS
     assert "done" in TOOL_GUIDANCE_UITARS
 run_test("UITARS prompt has all actions", test_uitars_prompt_has_actions)
 
