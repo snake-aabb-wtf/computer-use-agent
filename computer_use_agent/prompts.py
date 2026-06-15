@@ -127,7 +127,10 @@ TOOL_GUIDANCE_VISION = """# Available Actions (Vision Mode)
 You interact with the desktop through these actions. Return ONE action per response as a JSON object.
 
 ## Coordinate System
-- Screen origin is top-left: (0, 0)
+The screenshot has GRID LINES with coordinate labels every 200 pixels.
+- Use these grid lines as reference to estimate coordinates
+- The grid shows (0,0) at top-left, and labels at each grid intersection
+- Count grid lines to estimate position: e.g., if a button is 3 lines right and 2 lines down from top-left, coordinates are approximately (600, 400)
 - Screen bounds: (0, 0) to (SCREEN_WIDTH, SCREEN_HEIGHT)
 - Screen CENTER: (SCREEN_WIDTH/2, SCREEN_HEIGHT/2)
 
@@ -138,8 +141,10 @@ You interact with the desktop through these actions. Return ONE action per respo
 
 ## Click Accuracy Rules
 1. ALWAYS describe WHAT you are clicking in the thought field
-2. Click at the CENTER of buttons/elements, not edges
-3. After clicking, ALWAYS take a screenshot to verify
+2. Use grid lines to estimate coordinates precisely
+3. Click at the CENTER of buttons/elements, not edges
+4. After clicking, ALWAYS take a screenshot to verify
+5. If unsure, use "move" to hover first, then screenshot to confirm
 
 ## Text Input
 {"thought": "...", "action": "type", "text": "text to type"}
