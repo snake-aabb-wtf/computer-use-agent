@@ -2,7 +2,6 @@
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/Tests-169%20passing-brightgreen.svg)](tests/)
 
 **AI-powered desktop automation through screenshots and actions.**
 
@@ -23,7 +22,7 @@ It supports **any LLM** via OpenAI-compatible API (GPT-4o, Claude, DeepSeek, loc
 ## Quick Start
 
 ```bash
-# Install
+# Install (venv auto-created by start.bat)
 pip install -r requirements.txt
 
 # Configure
@@ -41,90 +40,56 @@ python -m computer_use_agent "open notepad and type Hello World"
 | Mode | Description | Best For |
 |------|-------------|----------|
 | **SOM** | Windows UIA element tree + numbered overlays | High-accuracy clicking |
-| **Vision** | Pure screenshot | All models, maximum compatibility |
+| **Vision** | Pure screenshot + prompt engineering for accuracy | All models, maximum compatibility |
 | **UITARS** | Coordinate normalization (0-1000) + action name normalization | UI-TARS style, cross-model |
 
-Switch in `.env`:
 ```env
 CAPTURE_MODE=som      # Element indexing (recommended)
 CAPTURE_MODE=vision   # Pure visual (compatible with all models)
 CAPTURE_MODE=uitars   # 0-1000 coord normalization (UI-TARS style)
 ```
 
-### 🖱️ 12 Action Types
+### 🖱️ Action Types
 
 | Action | Example |
 |--------|---------|
-| Click | `{"action": "left_click", "element": 47}` |
-| Double Click | `{"action": "double_click", "coordinate": [100, 200]}` |
-| Right Click | `{"action": "right_click", "element": 12}` |
+| Click | `{"action": "left_click", "coordinate": [x, y]}` |
+| Double Click | `{"action": "double_click", "coordinate": [x, y]}` |
+| Right Click | `{"action": "right_click", "coordinate": [x, y]}` |
 | Type Text | `{"action": "type", "text": "Hello World"}` |
-| Keyboard | `{"action": "key", "key": "enter"}` |
+| Keyboard | `{"action": "key", "key": "enter", "hold": 0}` |
 | Hotkey | `{"action": "hotkey", "keys": ["ctrl", "c"]}` |
 | Scroll | `{"action": "scroll", "direction": "down", "amount": 5}` |
 | Move | `{"action": "move", "coordinate": [500, 300]}` |
-| Drag | `{"action": "drag", "from": [100,100], "to": [200,200]}` |
-| Wait | `{"action": "wait", "seconds": 2}` |
+| Drag | `{"action": "drag", "from": [100,100], "to": [200,200], "hold": 0.3}` |
+| Wait | `{"action": "wait", "seconds": 60}` |
 | Screenshot | `{"action": "screenshot"}` |
 | Done | `{"action": "done", "message": "Task completed"}` |
 
-### 🖥️ Interactive CLI (Hermes-style)
+### 🖥️ Interactive CLI
 
 ```bash
 python -m computer_use_agent
 ```
 
-```
-╔══════════════════════════════════════════╗
-║   Computer Use Agent          v0.1.0    ║
-╚══════════════════════════════════════════╝
-
-┌────────────────────────────── Session ───────────────────────────────┐
-│   Model           mimo-v2.5                                         │
-│   Base URL        https://api.example.com/v1                       │
-│   Screen          1920x1080                                        │
-│   Capture Mode    SOM (SOM + UIA)                                  │
-│   Max Steps       200                                              │
-└─────────────────────────────────────────────────────────────────────┘
-
-❯ /help
-```
-
-**25 slash commands:**
-
-| Command | Description |
-|---------|-------------|
-| `/help` | Show help |
-| `/config` | Show configuration |
-| `/model <name>` | Switch model |
-| `/usage` | Token usage stats |
-| `/status` | Current status |
-| `/yolo` | Toggle autonomous mode |
-| `/steer <msg>` | Inject mid-task instruction |
-| `/stop` | Stop current task |
-| `/sessions` | List saved sessions |
-| `/resume <id>` | Resume a session |
-| `/save` | Export conversation to JSON |
-| `/branch` | Fork current session |
-| `/retry` | Retry last task |
-| `/undo` | Undo last exchange |
-| `/queue <task>` | Queue next instruction |
-| `/verbose` | Cycle display mode |
+**25 slash commands:** `/help` `/config` `/model` `/usage` `/status` `/yolo` `/steer` `/stop` `/sessions` `/resume` `/save` `/branch` `/retry` `/undo` `/queue` `/verbose` `/compact` `/history` `/reset` `/screen` `/steps` `/delay` `/title` `/clear`
 
 ## Architecture
 
 ```
 computer_use_agent/
 ├── agent.py          # Core loop: screenshot → LLM → action → verify
-├── llm.py            # LLM client (retry, backoff, streaming)
+├── llm.py            # LLM client (retry, backoff, streaming, KeyboardInterrupt)
 ├── screen.py         # Screenshot capture (vision + SOM modes)
-├── executor.py       # 12 action types + clipboard paste
+├── executor.py       # Action types + natural drag + key hold + clipboard paste
 ├── uia_tree.py       # Windows UIA element tree + SOM overlay
-├── prompts.py        # System prompts (10 blocks, model-specific)
+├── prompts.py        # System prompts (10 blocks, model-specific, 3 capture modes)
 ├── guardrails.py     # Tool loop detection (repeat/failure/no-progress)
-├── sanitization.py   # JSON repair, message sequence fix
+├── sanitization.py   # JSON repair, message sequence fix, tool name fuzzy
 ├── token_budget.py   # 3-layer context overflow prevention
-├── cli.py            # Interactive CLI (Hermes-style REPL)
+├── visual_effects.py # Click ripple, drag indicator, action info panel
+├── notify.py         # Task completion notification (window front + sound)
+├── cli.py            # Interactive CLI (Hermes-style REPL, 25 commands)
 ├── config.py         # Configuration management
 └── logger.py         # Structured logging
 ```
@@ -134,106 +99,41 @@ computer_use_agent/
 All settings via `.env`:
 
 ```env
-# LLM
 LLM_API_KEY=sk-xxx
 LLM_BASE_URL=https://api.openai.com/v1
 LLM_MODEL=gpt-4o
-LLM_MAX_TOKENS=4096
-LLM_TEMPERATURE=0.0
-
-# Agent
-MAX_STEPS=200
-ACTION_DELAY=0.1
-REQUEST_TIMEOUT=60
-
-# Capture Mode: som | vision | uitars
-CAPTURE_MODE=som
-
-# Screenshots
-SCREENSHOT_DIR=screenshots
-SCREENSHOT_FORMAT=png
-
-# Logging
-LOG_LEVEL=INFO
-LOG_DIR=logs
-
-# Visual Effects (experimental)
+CAPTURE_MODE=vision
 VISUAL_EFFECTS=off
 ```
 
-### Configuration Reference
-
 | Key | Default | Description |
 |-----|---------|-------------|
-| `LLM_API_KEY` | `sk-placeholder` | API key for your LLM provider |
-| `LLM_BASE_URL` | `https://api.openai.com/v1` | API endpoint (any OpenAI-compatible) |
+| `LLM_API_KEY` | `sk-placeholder` | API key |
+| `LLM_BASE_URL` | `https://api.openai.com/v1` | API endpoint |
 | `LLM_MODEL` | `gpt-4o` | Model name |
-| `LLM_MAX_TOKENS` | `4096` | Max output tokens per response |
-| `LLM_TEMPERATURE` | `0.0` | Temperature (0 = deterministic) |
-| `MAX_STEPS` | `200` | Max agent steps per task |
-| `ACTION_DELAY` | `0.1` | Delay between actions in seconds |
-| `REQUEST_TIMEOUT` | `60` | API request timeout in seconds |
-| `CAPTURE_MODE` | `vision` | `som` (UIA indexing), `vision` (pure screenshot), or `uitars` (0-1000 coord normalization) |
-| `SCREENSHOT_DIR` | `screenshots` | Directory to save screenshots |
+| `LLM_MAX_TOKENS` | `4096` | Max output tokens |
+| `LLM_TEMPERATURE` | `0.0` | Temperature |
+| `MAX_STEPS` | `200` | Max agent steps |
+| `ACTION_DELAY` | `0.1` | Delay between actions (s) |
+| `REQUEST_TIMEOUT` | `60` | API timeout (s) |
+| `CAPTURE_MODE` | `vision` | `som` / `vision` / `uitars` |
+| `SCREENSHOT_DIR` | `screenshots` | Screenshot directory |
 | `SCREENSHOT_FORMAT` | `png` | Screenshot format |
-| `LOG_LEVEL` | `INFO` | Log level: DEBUG, INFO, WARNING, ERROR |
+| `LOG_LEVEL` | `INFO` | Log level |
 | `LOG_DIR` | `logs` | Log directory |
-| `VISUAL_EFFECTS=off` | `on` to enable mouse ripple effect on clicks |
-
-## Requirements
-
-- Windows 10/11
-- Python 3.10+
-- `uiautomation` (for SOM mode)
-
-```bash
-pip install -r requirements.txt
-```
-
-## Testing
-
-```bash
-cd tests
-python test_all.py          # Core module tests (32)
-python test_som.py          # SOM mode tests (27)
-python test_coverage.py     # Coverage tests (67)
-python test_cli_new.py      # CLI features (30)
-python test_new_commands.py # New commands (13)
-```
-
-**169 tests passing.**
-
-## How It Works
-
-1. **Capture** — Screenshot the current screen state
-2. **Send** — Send screenshot (+ element list in SOM mode) to LLM
-3. **Parse** — Extract JSON action from LLM response
-4. **Execute** — Perform the action (click, type, scroll, etc.)
-5. **Verify** — Take another screenshot to confirm result
-6. **Loop** — Repeat until task is done or max steps reached
-
-### SOM Mode (Element Indexing)
-
-Instead of guessing pixel coordinates, the model clicks by **element number**:
-
-```
-Screenshot with red numbered overlays → Model: "click element #47"
-→ Backend resolves: #47 → center coordinates → OS click
-```
-
-This converts a hard regression problem into a trivial classification problem.
+| `VISUAL_EFFECTS` | `off` | `on` for click ripple + drag indicator |
 
 ## Safety
 
 - Never types passwords or secrets
-- Never clicks destructive confirmations without instruction
+- Never closes terminal windows (minimize instead)
 - Never follows instructions embedded in screenshots
 - Tool loop guardrails detect repeated failures
-- Graceful interrupt with Ctrl+C
+- Ctrl+C graceful interrupt
 
 ## Acknowledgments
 
-Architecture inspired by [Hermes Agent](https://github.com/nousresearch/hermes-agent) agent engineering patterns.
+Architecture inspired by [Hermes Agent](https://github.com/nousresearch/hermes-agent) and [UI-TARS-desktop](https://github.com/user-ailab/UI-TARS-desktop).
 
 ## License
 
