@@ -251,6 +251,7 @@ COMMANDS = {
     "/config":   "显示当前配置",
     "/screen":   "查看屏幕分辨率",
     "/history":  "查看会话历史",
+    "/compact":  "手动压缩上下文",
     "/reset":    "重置会话历史",
     "/model":    "切换模型 (/model <name>)",
     "/steps":    "设置最大步数 (/steps <n>)",
@@ -640,6 +641,17 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
 
     elif command == "/usage":
         _print_usage(agent)
+
+    elif command == "/compact":
+        from .agent import _compress_history
+        from .token_budget import estimate_history_tokens
+        old_tokens = estimate_history_tokens(agent.history)
+        old_len = len(agent.history)
+        agent.history = _compress_history(agent.history)
+        new_tokens = estimate_history_tokens(agent.history)
+        new_len = len(agent.history)
+        console.print(f"  [{GREEN}]Compressed: {old_len} msgs → {new_len} msgs[/{GREEN}]")
+        console.print(f"  [{GREEN}]Tokens: {old_tokens:,} → {new_tokens:,}[/{GREEN}]")
 
     elif command == "/history":
         if not agent.history:

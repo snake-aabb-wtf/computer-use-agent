@@ -242,11 +242,7 @@ class Agent:
                 else:
                     img_b64 = capture()
 
-            # 2. 预检上下文压缩
-            if should_compress(self.history):
-                self.logger.info("  🗜 Compressing history (preflight)...")
-                self.history = _compress_history(self.history)
-                self.history = enforce_history_budget(self.history)
+            # 2. 预检上下文压缩（已移除自动压缩，改为 /compact 手动触发）
 
             # 3. 消息准备流水线
             prepared = self._prepare_messages()
