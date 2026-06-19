@@ -237,7 +237,9 @@ class Agent:
                     save_dir = Path(config.SCREENSHOT_DIR)
                     save_dir.mkdir(parents=True, exist_ok=True)
                     from PIL import ImageGrab
+                    from .uia_tree import render_som
                     img = ImageGrab.grab()
+                    img = render_som(img, elements)
                     img.save(save_dir / f"step_{step:04d}.png")
                     self.logger.info(f"   SOM: {len(elements)} elements found")
             else:

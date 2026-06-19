@@ -27,9 +27,9 @@ def _draw_grid(img: Image.Image, spacing: int = 200) -> Image.Image:
     except (OSError, IOError):
         font = ImageFont.load_default()
 
-    grid_color = (255, 255, 255, 120)  # 白色半透明
-    text_bg = (0, 0, 0, 160)           # 黑色背景
-    text_color = (255, 255, 255, 255)  # 白色文字
+    grid_color = (0, 255, 255, 100)    # 亮青色半透明，在浅色/深色背景都可见
+    text_bg = (0, 0, 0, 180)          # 黑色背景
+    text_color = (0, 255, 255, 255)   # 亮青色文字
 
     # 画竖线 + 顶部坐标标注
     for x in range(spacing, w, spacing):
@@ -74,14 +74,14 @@ def capture():
 
 
 def capture_and_save(step=0):
-    """截图并保存到本地。"""
+    """截图并保存到本地（包含参考线）。"""
     screenshot = ImageGrab.grab()
+    if config.CAPTURE_MODE == "vision":
+        screenshot = _draw_grid(screenshot)
     save_dir = Path(config.SCREENSHOT_DIR)
     save_dir.mkdir(parents=True, exist_ok=True)
     filepath = save_dir / f"step_{step:04d}.{config.SCREENSHOT_FORMAT}"
     screenshot.save(filepath)
-    if config.CAPTURE_MODE == "vision":
-        screenshot = _draw_grid(screenshot)
     return _image_to_base64(screenshot), filepath
 
 
