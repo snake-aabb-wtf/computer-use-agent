@@ -38,3 +38,7 @@ LOG_DIR = _str("LOG_DIR", "logs")
 
 # Visual effects (experimental)
 VISUAL_EFFECTS = _str("VISUAL_EFFECTS", "off") == "on"
+
+# HTTP API server
+API_HOST = _str("API_HOST", "127.0.0.1")
+API_PORT = _int("API_PORT", 2024)
