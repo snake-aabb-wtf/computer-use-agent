@@ -29,8 +29,15 @@ pip install -r requirements.txt
 cp .env.example .env
 # Edit .env with your API key
 
-# Run
+# CLI mode (direct task)
 python -m computer_use_agent "open notepad and type Hello World"
+
+# Interactive REPL mode
+python -m computer_use_agent
+
+# HTTP API mode (for other agents to drive)
+python -m computer_use_agent --serve          # default 127.0.0.1:2024
+python -m computer_use_agent --serve --port 8080
 ```
 
 ## Features
@@ -72,13 +79,47 @@ CAPTURE_MODE=uitars   # 0-1000 coord normalization (UI-TARS style)
 python -m computer_use_agent
 ```
 
-**25 slash commands:** `/help` `/config` `/model` `/usage` `/status` `/yolo` `/steer` `/stop` `/sessions` `/resume` `/save` `/branch` `/retry` `/undo` `/queue` `/verbose` `/compact` `/history` `/reset` `/screen` `/steps` `/delay` `/title` `/clear`
+**26 slash commands:** `/help` `/config` `/model` `/usage` `/status` `/yolo` `/steer` `/stop` `/sessions` `/resume` `/save` `/branch` `/retry` `/undo` `/queue` `/verbose` `/compact` `/history` `/reset` `/screen` `/steps` `/delay` `/title` `/clear`
+
+### 🔌 HTTP API
+
+Let other terminal agents drive computer-use-agent via REST — zero new dependencies, stdlib only.
+
+```bash
+# Start API server
+python -m computer_use_agent --serve --port 2024
+
+# Submit a task from any language (curl, requests, fetch, etc.)
+curl -X POST http://127.0.0.1:2024/run \
+  -H "Content-Type: application/json" \
+  -d '{"task": "open calculator and compute 2+2"}'
+# → {"id": "a1b2c3d4e5f6", "status": "accepted"}
+
+# Check task progress
+curl http://127.0.0.1:2024/status/a1b2c3d4e5f6
+# → {"id": "a1b2c3d4e5f6", "status": "done", "result": "calculator opened"}
+
+# Health check
+curl http://127.0.0.1:2024/health
+# → {"status": "ok", "busy": false, "queue_size": 0}
+```
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | Service info + endpoint docs |
+| `/health` | GET | Server status, busy/idle, queue size |
+| `/run` | POST | Submit task `{"task": "..."}` → task ID |
+| `/status/<id>` | GET | Task progress: `queued` → `running` → `done` / `error` |
+| `/stop` | POST | Stop current task + clear queue |
+
+Config via `.env`: `API_HOST=127.0.0.1` `API_PORT=2024`
 
 ## Architecture
 
 ```
 computer_use_agent/
 ├── agent.py          # Core loop: screenshot → LLM → action → verify
+├── api.py            # HTTP REST API (stdlib, zero-dependency)
 ├── llm.py            # LLM client (retry, backoff, streaming, KeyboardInterrupt)
 ├── screen.py         # Screenshot capture (vision + SOM modes)
 ├── executor.py       # Action types + natural drag + key hold + clipboard paste
@@ -89,7 +130,7 @@ computer_use_agent/
 ├── token_budget.py   # 3-layer context overflow prevention
 ├── visual_effects.py # Click ripple, drag indicator, action info panel
 ├── notify.py         # Task completion notification (window front + sound)
-├── cli.py            # Interactive CLI (Hermes-style REPL, 25 commands)
+├── cli.py            # Interactive CLI (Hermes-style REPL, 26 commands)
 ├── config.py         # Configuration management
 └── logger.py         # Structured logging
 ```
@@ -122,6 +163,8 @@ VISUAL_EFFECTS=off
 | `LOG_LEVEL` | `INFO` | Log level |
 | `LOG_DIR` | `logs` | Log directory |
 | `VISUAL_EFFECTS` | `off` | `on` for click ripple + drag indicator |
+| `API_HOST` | `127.0.0.1` | API server bind address |
+| `API_PORT` | `2024` | API server port |
 
 ## Safety
 

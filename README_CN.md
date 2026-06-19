@@ -29,8 +29,15 @@ pip install -r requirements.txt
 cp .env.example .env
 # 编辑 .env 填入你的 API Key
 
-# 运行
+# CLI 模式（直接执行任务）
 python -m computer_use_agent "打开记事本，输入 Hello World"
+
+# 交互式 REPL 模式
+python -m computer_use_agent
+
+# HTTP API 模式（供其他 Agent 调用）
+python -m computer_use_agent --serve          # 默认 127.0.0.1:2024
+python -m computer_use_agent --serve --port 8080
 ```
 
 ## 核心特性
@@ -72,13 +79,47 @@ CAPTURE_MODE=uitars   # 坐标归一化 0-1000（UI-TARS 风格）
 python -m computer_use_agent
 ```
 
-**25 个斜杠命令：** `/help` `/config` `/model` `/usage` `/status` `/yolo` `/steer` `/stop` `/sessions` `/resume` `/save` `/branch` `/retry` `/undo` `/queue` `/verbose` `/compact` `/history` `/reset` `/screen` `/steps` `/delay` `/title` `/clear`
+**26 个斜杠命令：** `/help` `/config` `/model` `/usage` `/status` `/yolo` `/steer` `/stop` `/sessions` `/resume` `/save` `/branch` `/retry` `/undo` `/queue` `/verbose` `/compact` `/history` `/reset` `/screen` `/steps` `/delay` `/title` `/clear`
+
+### 🔌 HTTP API 接口
+
+让其他终端 Agent 通过 REST 接口驱动本 Agent —— 纯 stdlib，零额外依赖。
+
+```bash
+# 启动 API 服务器
+python -m computer_use_agent --serve --port 2024
+
+# 从任何语言提交任务（curl / requests / fetch 等）
+curl -X POST http://127.0.0.1:2024/run \
+  -H "Content-Type: application/json" \
+  -d '{"task": "打开计算器，计算 2+2"}'
+# → {"id": "a1b2c3d4e5f6", "status": "accepted"}
+
+# 查询任务进度
+curl http://127.0.0.1:2024/status/a1b2c3d4e5f6
+# → {"id": "a1b2c3d4e5f6", "status": "done", "result": "计算器已打开"}
+
+# 健康检查
+curl http://127.0.0.1:2024/health
+# → {"status": "ok", "busy": false, "queue_size": 0}
+```
+
+| 端点 | 方法 | 说明 |
+|------|------|------|
+| `/` | GET | 服务信息 + 接口文档 |
+| `/health` | GET | 服务器状态、忙碌/空闲、队列长度 |
+| `/run` | POST | 提交任务 `{"task": "..."}` → 返回 task ID |
+| `/status/<id>` | GET | 任务进度：`queued` → `running` → `done` / `error` |
+| `/stop` | POST | 停止当前任务 + 清空队列 |
+
+`.env` 配置：`API_HOST=127.0.0.1` `API_PORT=2024`
 
 ## 项目架构
 
 ```
 computer_use_agent/
 ├── agent.py          # 核心循环：截图 → LLM → 操作 → 验证
+├── api.py            # HTTP REST API（stdlib，零依赖）
 ├── llm.py            # LLM 客户端（重试/退避/流式/中断处理）
 ├── screen.py         # 屏幕截图（vision + SOM 模式）
 ├── executor.py       # 操作类型 + 自然拖拽 + 按键长按 + 剪贴板粘贴
@@ -89,7 +130,7 @@ computer_use_agent/
 ├── token_budget.py   # 3 层上下文溢出防御
 ├── visual_effects.py # 点击涟漪、拖拽指示器、动作信息面板
 ├── notify.py         # 任务完成通知（窗口前置 + 提示音）
-├── cli.py            # 交互式 CLI（Hermes 风格 REPL，25 个命令）
+├── cli.py            # 交互式 CLI（Hermes 风格 REPL，26 个命令）
 ├── config.py         # 配置管理
 └── logger.py         # 结构化日志
 ```
@@ -122,6 +163,8 @@ VISUAL_EFFECTS=off
 | `LOG_LEVEL` | `INFO` | 日志级别 |
 | `LOG_DIR` | `logs` | 日志目录 |
 | `VISUAL_EFFECTS` | `off` | `on` 开启点击涟漪 + 拖拽指示器 |
+| `API_HOST` | `127.0.0.1` | API 服务器绑定地址 |
+| `API_PORT` | `2024` | API 服务器端口 |
 
 ## 安全机制
 
