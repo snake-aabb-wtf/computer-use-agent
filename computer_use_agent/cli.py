@@ -687,7 +687,6 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
 
     elif command == "/compact":
         from .agent import _compress_history
-        from .token_budget import estimate_history_tokens
         old_tokens = estimate_history_tokens(agent.history)
         old_len = len(agent.history)
         agent.history = _compress_history(agent.history)

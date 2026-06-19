@@ -105,7 +105,7 @@ def test_statusbar_render():
     agent.stats.update({"_tokens_in": 1000, "_tokens_out": 500, "_elapsed": 2.0, "action": "click"})
     agent.stats.update({"_tokens_in": 2000, "_tokens_out": 800, "_elapsed": 3.0, "action": "done"})
     rendered = sb.render(80)
-    assert "mimo-v2.5" in rendered
+    assert "Model" in rendered
     assert "Step" in rendered
     assert "Act" in rendered
     print(f"    rendered: {rendered}")

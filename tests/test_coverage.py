@@ -332,7 +332,7 @@ run_test("SAFETY_RULES content", test_safety_rules_content)
 def test_error_recovery_content():
     from computer_use_agent.prompts import ERROR_RECOVERY
     assert "Verification" in ERROR_RECOVERY
-    assert "different approach" in ERROR_RECOVERY
+    assert "different coordinates" in ERROR_RECOVERY
 run_test("ERROR_RECOVERY content", test_error_recovery_content)
 
 def test_tool_enforcement_content():
