@@ -202,7 +202,7 @@ Coordinates are normalized to 0-1000 range. The backend converts to actual scree
 {"thought": "...", "action": "type", "text": "text to type"}
 
 ## Keyboard
-{"thought": "...", "action": "hotkey", "key": "ctrl c"}
+{"thought": "...", "action": "hotkey", "keys": ["ctrl", "c"]}
 
 ## Scroll
 {"thought": "...", "action": "scroll", "direction": "down", "amount": 5}
@@ -356,12 +356,12 @@ def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode=
     return "\n\n".join(parts)
 
 
-_DEFAULT_PROMPT = None
+_PROMPT_CACHE: dict = {}
 
 
 def get_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
-    """获取系统提示词（带缓存）。"""
-    global _DEFAULT_PROMPT
-    if _DEFAULT_PROMPT is None:
-        _DEFAULT_PROMPT = build_system_prompt(screen_width, screen_height, model, capture_mode)
-    return _DEFAULT_PROMPT
+    """获取系统提示词（带缓存，按参数区分）。"""
+    cache_key = (screen_width, screen_height, model, capture_mode)
+    if cache_key not in _PROMPT_CACHE:
+        _PROMPT_CACHE[cache_key] = build_system_prompt(screen_width, screen_height, model, capture_mode)
+    return _PROMPT_CACHE[cache_key]

@@ -122,7 +122,7 @@ class VisualOverlay:
 
     def _draw(self, sw, sh):
         try:
-            hdc = user32.GetDC(hwnd)
+            hdc = user32.GetDC(self._hwnd)
 
             # Clear
             brush = gdi32.CreateSolidBrush(RGB_BLACK)
@@ -153,7 +153,7 @@ class VisualOverlay:
 
                 self._effects = active_effects
 
-            user32.ReleaseDC(hwnd, hdc)
+            user32.ReleaseDC(self._hwnd, hdc)
         except Exception:
             pass
 

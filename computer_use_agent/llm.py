@@ -89,14 +89,13 @@ class StreamPrinter:
         if delta:
             self.buffer += delta
             if not self.printed:
-                self.logger.info(f"  💭 ", end="")
+                self.logger.info("  💭 ", extra={"stream": True})
                 self.printed = True
-            print(delta, end="", flush=True)
+            self.logger.info(delta, extra={"stream": True})
 
     def finish(self):
         """流结束时调用。"""
-        if self.printed:
-            print()  # 换行
+        pass
 
 
 def chat(
@@ -269,7 +268,7 @@ def _chat_streaming(client: OpenAI, messages: list, logger=None):
         if delta and delta.content:
             collected_content.append(delta.content)
             if logger:
-                print(delta.content, end="", flush=True)
+                logger.info(f"  💭 {delta.content}", extra={"stream": True})
 
         if delta and hasattr(delta, "reasoning_content") and delta.reasoning_content:
             collected_reasoning.append(delta.reasoning_content)
@@ -308,7 +307,7 @@ def _chat_streaming(client: OpenAI, messages: list, logger=None):
     resp.usage = usage
 
     if logger and collected_content:
-        print()  # 换行
+        pass  # newline already handled per-chunk
 
     return resp
 

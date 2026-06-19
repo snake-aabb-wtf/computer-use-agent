@@ -178,23 +178,27 @@ def _clipboard_paste(text: str):
     os_name = platform.system()
 
     if os_name == "Windows":
-        # Windows: 使用 PowerShell 设置剪贴板
-        # 使用 -NoProfile -NonInteractive 避免干扰
-        cmd = [
-            "powershell", "-NoProfile", "-NonInteractive", "-Command",
-            f"Set-Clipboard -Value '{text.replace(chr(39), chr(39)+chr(39))}'"
-        ]
+        # Windows: 使用 PowerShell 通过 stdin 设置剪贴板，避免命令注入和长度限制
         try:
-            subprocess.run(cmd, capture_output=True, timeout=5)
+            process = subprocess.Popen(
+                ["powershell", "-NoProfile", "-NonInteractive", "-Command", "-"],
+                stdin=subprocess.PIPE, stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL
+            )
+            script = (
+                "Add-Type -AssemblyName System.Windows.Forms;"
+                "[System.Windows.Forms.Clipboard]::SetText($input)"
+            )
+            process.communicate(
+                (script + "\n" + text).encode("utf-8"),
+                timeout=5
+            )
         except Exception:
             # 备用方案：使用 pyperclip
             try:
                 import pyperclip
                 pyperclip.copy(text)
             except ImportError:
-                # 最后手段：逐字符输入（慢但可靠）
-                for char in text:
-                    pyautogui.press(char) if len(char) == 1 else None
                 return
 
         # 粘贴

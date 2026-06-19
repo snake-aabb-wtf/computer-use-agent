@@ -165,8 +165,7 @@ class Agent:
     def _stop_effects(self):
         """停止视觉效果。"""
         try:
-            from .visual_effects import stop_border, cleanup
-            stop_border()
+            from .visual_effects import cleanup
             cleanup()
         except Exception:
             pass

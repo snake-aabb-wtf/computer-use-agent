@@ -94,62 +94,84 @@ class SessionDB:
     def _conn(self):
         return self._mem_conn or sqlite3.connect(self.db_path)
 
+    def _close_conn(self, conn):
+        if conn is not self._mem_conn:
+            conn.close()
+
     def save_session(self, session_id: str, task: str, result: str,
                      steps: int, tokens_in: int, tokens_out: int,
                      parent_id: str = None):
         conn = self._conn()
-        conn.execute(
-            """INSERT OR REPLACE INTO sessions
-               (id, task, started_at, ended_at, steps, tokens_in, tokens_out, result, parent_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-            (session_id, task, datetime.now().isoformat(),
-             datetime.now().isoformat(), steps, tokens_in, tokens_out, result, parent_id)
-        )
-        conn.commit()
+        try:
+            conn.execute(
+                """INSERT OR REPLACE INTO sessions
+                   (id, task, started_at, ended_at, steps, tokens_in, tokens_out, result, parent_id)
+                   VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?)""",
+                (session_id, task, datetime.now().isoformat(),
+                 steps, tokens_in, tokens_out, result, parent_id)
+            )
+            conn.commit()
+        finally:
+            self._close_conn(conn)
 
     def save_message(self, session_id: str, role: str, content: str):
         conn = self._conn()
-        conn.execute(
-            "INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
-            (session_id, role, content, datetime.now().isoformat())
-        )
-        conn.commit()
+        try:
+            conn.execute(
+                "INSERT INTO messages (session_id, role, content, timestamp) VALUES (?, ?, ?, ?)",
+                (session_id, role, content, datetime.now().isoformat())
+            )
+            conn.commit()
+        finally:
+            self._close_conn(conn)
 
     def get_session(self, session_id: str) -> dict | None:
         conn = self._conn()
-        conn.row_factory = sqlite3.Row
-        row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
-        return dict(row) if row else None
+        try:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute("SELECT * FROM sessions WHERE id = ?", (session_id,)).fetchone()
+            return dict(row) if row else None
+        finally:
+            self._close_conn(conn)
 
     def get_messages(self, session_id: str) -> list[dict]:
         conn = self._conn()
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            "SELECT role, content FROM messages WHERE session_id = ? ORDER BY id",
-            (session_id,)
-        ).fetchall()
-        return [{"role": r["role"], "content": r["content"]} for r in rows]
+        try:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT role, content FROM messages WHERE session_id = ? ORDER BY id",
+                (session_id,)
+            ).fetchall()
+            return [{"role": r["role"], "content": r["content"]} for r in rows]
+        finally:
+            self._close_conn(conn)
 
     def end_session(self, session_id: str, reason: str = "completed"):
         conn = self._conn()
-        conn.execute(
-            "UPDATE sessions SET ended_at = ?, result = ? WHERE id = ?",
-            (datetime.now().isoformat(), reason, session_id)
-        )
-        conn.commit()
+        try:
+            conn.execute(
+                "UPDATE sessions SET ended_at = ?, result = ? WHERE id = ?",
+                (datetime.now().isoformat(), reason, session_id)
+            )
+            conn.commit()
+        finally:
+            self._close_conn(conn)
 
     def get_recent_sessions(self, limit: int = 10) -> list[dict]:
         conn = self._conn()
-        conn.row_factory = sqlite3.Row
-        rows = conn.execute(
-            """SELECT s.*, 
-                      (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' LIMIT 1) as preview
-               FROM sessions s 
-               WHERE s.ended_at IS NULL OR s.ended_at != 'resumed_other'
-               ORDER BY s.started_at DESC LIMIT ?""",
-            (limit,)
-        ).fetchall()
-        return [dict(r) for r in rows]
+        try:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                """SELECT s.*, 
+                          (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' LIMIT 1) as preview
+                   FROM sessions s 
+                   WHERE s.ended_at IS NULL OR s.ended_at != 'resumed_other'
+                   ORDER BY s.started_at DESC LIMIT ?""",
+                (limit,)
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            self._close_conn(conn)
 
 
 # ═══════════════════════════════════════════════════════════
