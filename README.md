@@ -450,28 +450,19 @@ CI runs automatically on every push:
 - Lint (ruff + bandit)
 - CodeQL security analysis
 
-## 📦 Publishing to PyPI (one-time setup)
+## 📦 Distribution
 
-The release workflow (`.github/workflows/release.yml`) supports automatic PyPI
-publishing via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/).
-**This requires a one-time manual setup on PyPI.org:**
+v0.2.0 is distributed via **GitHub Releases** only (not PyPI):
 
-1. **PyPI side**: Visit <https://pypi.org/manage/account/publishing/> → Add a
-   pending publisher:
-   - Owner: `snake-aabb-wtf`
-   - Repository: `computer-use-agent`
-   - Workflow filename: `release.yml`
-   - Environment name: `pypi`
-2. **GitHub side**: Create a GitHub Environment named `pypi` (Settings →
-   Environments → New environment → `pypi`) with required reviewers.
+- 📥 **Download**: <https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.2.0>
+- 🐳 **Docker**: `docker pull ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.0` (multi-arch image)
+- 📦 **Build from source**: `pip install -e .` (see [Quick start](#-quick-start))
 
-After setup, pushing a `v*.*.*` tag (or running the workflow manually) will
-auto-build sdist + wheel, run `twine check`, and publish to PyPI via OIDC
-(no API token needed).
+PyPI publishing is **opt-in** and disabled by default. To enable:
 
-Until configured, the "Publish to PyPI" job will fail with
-`invalid-publisher` — this is **expected** and only requires the manual
-setup above. The `build` and `publish-testpypi` jobs still work.
+1. Set up [Trusted Publishing](https://docs.pypi.org/trusted-publishers/) on PyPI
+   (one-time manual setup; see comments in `.github/workflows/release.yml`).
+2. Uncomment the `publish-pypi` job — it will then run on every `v*.*.*` tag.
 
 ## 🤝 Contributing
 

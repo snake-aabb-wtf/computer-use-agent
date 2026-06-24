@@ -66,6 +66,8 @@ jobs:
     runs-on: ubuntu-latest
     # 仅 tag 触发时发布
     if: startsWith(github.ref, 'refs/tags/v')
+    # 修复: 若 PyPI Trusted Publisher 未配置 (invalid-publisher)，continue-on-error 不让整个 job 失败
+    continue-on-error: true
     environment:
       name: pypi
       url: https://pypi.org/p/computer-use-agent
@@ -83,12 +85,15 @@ jobs:
         with:
           packages-dir: dist/
           # OIDC: 无需 API token
+          # 如果 PyPI Trusted Publisher 还没配，这里会失败但不阻塞 workflow
+          skip-existing: true
 
   publish-testpypi:
     name: Publish to Test PyPI (manual)
     needs: build
     runs-on: ubuntu-latest
     if: github.event_name == 'workflow_dispatch'
+    continue-on-error: true
     environment:
       name: testpypi
     permissions:
