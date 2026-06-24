@@ -1,53 +1,110 @@
-# AGENTS.md — Computer Use Agent
+# AGENTS.md — Computer Use Agent (v0.2.0)
 
-This document is for AI agents maintaining this codebase. It provides comprehensive context about the project architecture, conventions, and key implementation details.
+> This document is for AI agents maintaining this codebase. It provides
+> comprehensive context about the project architecture, conventions, and
+> key implementation details. **Last updated for v0.2.0 (2026-06-24).**
 
 ## Project Overview
 
-**Computer Use Agent** is an AI-powered desktop automation tool. It takes screenshots, sends them to an LLM, receives action instructions, executes mouse/keyboard operations, and loops until the task is complete.
+**Computer Use Agent** is an AI-powered desktop automation tool. It takes
+screenshots, sends them to an LLM, receives action instructions, executes
+mouse/keyboard operations, and loops until the task is complete.
 
 **Core loop:**
 ```
 Screenshot → Send to LLM → Parse JSON action → Execute action → Verify with next screenshot → Repeat
 ```
 
-**Tech stack:** Python 3.10+, OpenAI SDK (compatible with any provider), pyautogui, PIL, uiautomation, Rich, prompt_toolkit.
+**Tech stack:** Python 3.10+, OpenAI SDK (compatible with any provider),
+pyautogui, PIL, mss (multi-monitor), uiautomation (Windows UIA), Rich,
+prompt_toolkit. Optional: pydantic-settings for config validation.
+
+**Entry points (4):**
+- `cua` (alias for `python -m computer_use_agent`) — REPL / one-shot
+- `cua-serve` — HTTP API server
+- `cua-mcp` — MCP server (stdio JSON-RPC)
+- `cua --replay <file>` — Session replay
 
 ## Directory Structure
 
 ```
-computer_use_agent/
-├── __init__.py         # Package init, version
-├── __main__.py         # Entry point, delegates to cli.main()
-├── config.py           # .env config loader (single source of truth)
-├── agent.py            # Core agent loop, SessionStats, history compression
-├── llm.py              # LLM client with retry/backoff/streaming/empty recovery
-├── screen.py           # Screenshot capture (vision + SOM modes)
-├── executor.py         # 12 action types + clipboard paste for CJK
-├── uia_tree.py         # Windows UIA element tree + SOM overlay rendering
-├── prompts.py          # 10 prompt blocks, model-specific, SOM/Vision switching
-├── guardrails.py       # Tool loop detection (exact fail, same tool, no progress)
-├── sanitization.py     # 5-pass JSON repair, message sequence repair, tool name fuzzy
-├── token_budget.py     # 3-layer context overflow defense (truncate, compact, budget)
-├── cli.py              # Interactive CLI (Hermes-style, 25 slash commands, SQLite sessions)
-└── logger.py           # Structured logging with file output
-tests/
-├── test_all.py         # Core module tests (32)
-├── test_som.py         # SOM mode tests (27)
-├── test_coverage.py    # Comprehensive coverage tests (67)
-├── test_cli_new.py     # CLI features tests (30)
-├── test_new_commands.py # New command tests (13)
-└── test_cli.py         # Legacy CLI test (deprecated, keep for reference)
+computer_use_agent/             # 22 Python modules
+├── __init__.py                 # __version__ = "0.2.0"
+├── __main__.py                 # argparse CLI entry
+├── agent.py                    # Main loop, SessionStats, history compression
+├── llm.py                      # OpenAI client + retry/backoff/streaming/JSON parse
+├── executor.py                 # 12 action types + clipboard paste for CJK
+├── screen.py                   # Multi-monitor capture (mss / ImageGrab)
+├── uia_tree.py                 # Windows UIA element tree + SOM overlay
+├── api.py                      # HTTP REST API (stdlib, Bearer auth, SSE, cancel)
+├── cli.py                      # Interactive REPL (Hermes-style, 26 commands)
+├── tui.py                      # rich.live status panel
+├── mcp_server.py               # MCP server (stdio JSON-RPC 2.0)
+├── plugins.py                  # Plugin system (ActionRegistry + auto-discovery)
+├── replay.py                   # JSONL session record + dry-run playback
+├── webhook.py                  # Async HTTP POST on done/error/interrupted
+├── i18n.py                     # zh-CN / en-US translations
+├── logger.py                   # Rotating logs + JSON formatter + 12-pattern redaction
+├── prompts.py                  # 10-block system prompt + platform hints
+├── sanitization.py             # 5-pass JSON repair
+├── token_budget.py             # 3-layer context overflow defense
+├── guardrails.py               # Loop detection (3 strategies)
+├── visual_effects.py           # Win32 click/drag/info overlay
+├── notify.py                   # Windows notification
+└── config.py                   # pydantic-settings + legacy fallback
+
+tests/                          # 13 test files
+├── test_all.py                 # Core module tests
+├── test_api.py
+├── test_cli.py                 # Legacy (kept for reference)
+├── test_cli_new.py
+├── test_comprehensive.py
+├── test_coverage.py
+├── test_logger_cli.py
+├── test_new_commands.py
+├── test_notify.py
+├── test_som.py
+├── test_uitars_mode.py
+├── test_visual.py
+└── test_visual_diag.py
+
+docs/                           # Deep-dive documentation
+├── ARCHITECTURE.md             # 3 mermaid diagrams + module map
+├── CONFIGURATION.md            # All 40+ env vars
+├── API.md                      # HTTP + MCP + Webhook reference
+└── PLUGINS.md                  # Custom action dev guide
+
+.github/
+├── workflows/
+│   ├── ci.yml                  # 11 jobs (3 OS × 3 Python + smoke + lint)
+│   ├── release.yml             # OIDC-based PyPI publish
+│   └── codeql.yml              # Security scan
+├── dependabot.yml              # pip / github-actions / docker
+├── pull_request_template.md
+├── ISSUE_TEMPLATE/
+└── release-notes/v0.2.0.md
+
+Dockerfile + docker-compose.yml + .dockerignore
+pyproject.toml                  # 4 console_scripts + 5 optional-deps
+CHANGELOG.md                    # Keep a Changelog format
+CONTRIBUTING.md                 # Conventional Commits + PR flow
+README.md / README_CN.md
+requirements.txt
 ```
 
 ## Key Architecture Decisions
 
 ### 1. Capture Mode Switching
 
-The agent supports two capture modes, configured via `CAPTURE_MODE` in `.env`:
+The agent supports THREE capture modes, configured via `CAPTURE_MODE` in `.env`:
 
-- **`som`** (default): Uses Windows UIA to get all interactable elements, draws red numbered overlays on the screenshot, sends element list to model. Model clicks by element index (`{"element": N}`).
-- **`vision`**: Pure screenshot. Model clicks by pixel coordinates (`{"coordinate": [x, y]}`).
+- **`som`** (recommended): Uses Windows UIA to get all interactable elements,
+  draws red numbered overlays on the screenshot, sends element list to model.
+  Model clicks by element index (`{"element": N}`). Highest accuracy, Windows-only.
+- **`vision`**: Pure screenshot. Model clicks by pixel coordinates
+  (`{"coordinate": [x, y]}`). Cross-platform, works with any model.
+- **`uitars`**: Pure screenshot + 0-1000 normalized coords (UI-TARS style).
+  For Qwen-VL / UI-TARS-family models.
 
 **Critical:** The prompt text changes based on capture mode. `prompts.py` has `TOOL_GUIDANCE_SOM` and `TOOL_GUIDANCE_VISION` — never mix them up. When adding new action types, update BOTH prompt blocks.
 
