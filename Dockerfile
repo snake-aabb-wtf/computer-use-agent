@@ -1,5 +1,5 @@
 # ── 阶段 1: 依赖安装 ──
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -20,7 +20,7 @@ COPY computer_use_agent/ ./computer_use_agent/
 RUN pip wheel --no-cache-dir --wheel-dir /wheels .
 
 # ── 阶段 2: 运行时镜像 ──
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 LABEL org.opencontainers.image.title="computer-use-agent"
 LABEL org.opencontainers.image.description="AI-powered desktop automation through screenshots and actions"
