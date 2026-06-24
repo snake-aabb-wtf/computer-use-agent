@@ -450,6 +450,29 @@ CI runs automatically on every push:
 - Lint (ruff + bandit)
 - CodeQL security analysis
 
+## 📦 Publishing to PyPI (one-time setup)
+
+The release workflow (`.github/workflows/release.yml`) supports automatic PyPI
+publishing via [Trusted Publishing](https://docs.pypi.org/trusted-publishers/).
+**This requires a one-time manual setup on PyPI.org:**
+
+1. **PyPI side**: Visit <https://pypi.org/manage/account/publishing/> → Add a
+   pending publisher:
+   - Owner: `snake-aabb-wtf`
+   - Repository: `computer-use-agent`
+   - Workflow filename: `release.yml`
+   - Environment name: `pypi`
+2. **GitHub side**: Create a GitHub Environment named `pypi` (Settings →
+   Environments → New environment → `pypi`) with required reviewers.
+
+After setup, pushing a `v*.*.*` tag (or running the workflow manually) will
+auto-build sdist + wheel, run `twine check`, and publish to PyPI via OIDC
+(no API token needed).
+
+Until configured, the "Publish to PyPI" job will fail with
+`invalid-publisher` — this is **expected** and only requires the manual
+setup above. The `build` and `publish-testpypi` jobs still work.
+
 ## 🤝 Contributing
 
 We welcome PRs! See [CONTRIBUTING.md](CONTRIBUTING.md) for:

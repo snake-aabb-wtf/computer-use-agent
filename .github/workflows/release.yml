@@ -1,5 +1,21 @@
 name: Release
 
+# ────────────────────────────────────────────────────────────────────
+# ⚠ PyPI Trusted Publishing requires ONE-TIME manual setup:
+#
+# 1. Visit https://pypi.org/manage/account/publishing/
+# 2. Add a new pending publisher with:
+#    - Owner:  snake-aabb-wtf
+#    - Repo:   computer-use-agent
+#    - Workflow: release.yml
+#    - Environment: pypi
+# 3. Create a GitHub Environment called "pypi" with required reviewers
+#    (Settings → Environments → New environment → pypi)
+#
+# Until configured, the "Publish to PyPI" job will fail with
+# `invalid-publisher`. The build and TestPyPI jobs still work without setup.
+# ────────────────────────────────────────────────────────────────────
+
 on:
   push:
     tags:

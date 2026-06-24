@@ -444,6 +444,26 @@ bandit -r computer_use_agent/ -ll
 - Lint（ruff + bandit）
 - CodeQL 安全分析
 
+## 📦 发布到 PyPI（一次性设置）
+
+Release workflow（`.github/workflows/release.yml`）支持通过
+[Trusted Publishing](https://docs.pypi.org/trusted-publishers/) 自动发布到 PyPI。
+**这需要在 PyPI.org 上做一次性手动配置：**
+
+1. **PyPI 端**：访问 <https://pypi.org/manage/account/publishing/> → 添加待定发布者：
+   - Owner: `snake-aabb-wtf`
+   - Repository: `computer-use-agent`
+   - Workflow filename: `release.yml`
+   - Environment name: `pypi`
+2. **GitHub 端**：创建名为 `pypi` 的 GitHub Environment（Settings → Environments
+   → New environment → `pypi`），并设置需要的审核者。
+
+配置完成后，推送 `v*.*.*` tag（或手动运行 workflow）将自动构建 sdist + wheel、
+跑 `twine check`、并通过 OIDC 发布到 PyPI（无需 API token）。
+
+在配置完成前，"Publish to PyPI" job 会以 `invalid-publisher` 失败 —— 这是**预期行为**，
+只需要上述手动设置。`build` 和 `publish-testpypi` jobs 不受影响。
+
 ## 🤝 贡献
 
 欢迎 PR！详见 [CONTRIBUTING.md](CONTRIBUTING.md)：
