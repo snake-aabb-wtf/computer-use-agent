@@ -100,6 +100,7 @@ jobs:
             pyproject.toml
 
       - name: Install dependencies
+        shell: bash
         run: |
           python -m pip install --upgrade pip
           # 安装核心依赖（手动列出以避免 pyautogui 在 Linux headless 上的问题）
