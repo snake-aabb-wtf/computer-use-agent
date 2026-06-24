@@ -1,0 +1,73 @@
+# ── 防止敏感文件进入 Docker 镜像 ──
+.env
+.env.local
+.env.*.local
+*.env
+secrets/
+*.pem
+*.key
+
+# ── Python 缓存 ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+coverage.xml
+bandit-report.json
+.tox/
+
+# ── 构建产物 ──
+build/
+dist/
+*.egg-info/
+*.egg
+.eggs/
+wheels/
+
+# ── 虚拟环境 ──
+venv/
+.venv/
+env/
+
+# ── IDE ──
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ── 日志与运行时产物 ──
+logs/
+screenshots/
+*.log
+
+# ── 测试 ──
+tests/
+.git/
+.github/
+.gitignore
+.gitattributes
+
+# ── 文档（已包含在 wheel 中） ──
+docs/
+*.md
+!README.md
+
+# ── Docker 自身 ──
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# ── CI 配置 ──
+.github/
+
+# ── 临时文件 ──
+tmp/
+temp/
+*.tmp

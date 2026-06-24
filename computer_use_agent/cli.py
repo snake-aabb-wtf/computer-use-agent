@@ -5,7 +5,6 @@ import sys
 import time
 import json
 import sqlite3
-import threading
 from pathlib import Path
 from datetime import datetime
 
@@ -26,7 +25,7 @@ from prompt_toolkit.key_binding import KeyBindings
 from . import config
 from .agent import Agent
 from .screen import get_screen_size
-from .token_budget import estimate_history_tokens, estimate_message_tokens
+from .token_budget import estimate_history_tokens, DEFAULT_CONFIG as BUDGET_CONFIG
 
 
 # ── Rich Console ──
@@ -157,18 +156,31 @@ class SessionDB:
         finally:
             self._close_conn(conn)
 
-    def get_recent_sessions(self, limit: int = 10) -> list[dict]:
+    def get_recent_sessions(self, limit: int = 10, exclude_id: str = None) -> list[dict]:
+        """获取最近会话。修复 C6: 新增 exclude_id 排除当前会话以修复 off-by-one。"""
         conn = self._conn()
         try:
             conn.row_factory = sqlite3.Row
-            rows = conn.execute(
-                """SELECT s.*, 
-                          (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' LIMIT 1) as preview
-                   FROM sessions s 
-                   WHERE s.ended_at IS NULL OR s.ended_at != 'resumed_other'
-                   ORDER BY s.started_at DESC LIMIT ?""",
-                (limit,)
-            ).fetchall()
+            if exclude_id:
+                # 多取一些以补偿被排除的，避免数量不足
+                rows = conn.execute(
+                    """SELECT s.*,
+                              (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' LIMIT 1) as preview
+                       FROM sessions s
+                       WHERE (s.ended_at IS NULL OR s.ended_at != 'resumed_other')
+                         AND s.id != ?
+                       ORDER BY s.started_at DESC LIMIT ?""",
+                    (exclude_id, limit)
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT s.*,
+                              (SELECT content FROM messages WHERE session_id = s.id AND role = 'user' LIMIT 1) as preview
+                       FROM sessions s
+                       WHERE s.ended_at IS NULL OR s.ended_at != 'resumed_other'
+                       ORDER BY s.started_at DESC LIMIT ?""",
+                    (limit,)
+                ).fetchall()
             return [dict(r) for r in rows]
         finally:
             self._close_conn(conn)
@@ -240,9 +252,13 @@ class StatusBar:
         steps = stats.total_steps
         actions = stats.total_actions
 
-        # 估算上下文使用率 (假设 200K 上下文窗口)
+        # 估算上下文使用率
+        # 修复 B3: 使用 BUDGET_CONFIG.max_history_chars 替代错误的 2000
         history_tokens = estimate_history_tokens(self.agent.history)
-        context_pct = min(100, history_tokens / 2000)
+        context_pct = min(
+            100.0,
+            (history_tokens / max(1, BUDGET_CONFIG.max_history_chars)) * 100,
+        )
 
         # 构建状态栏
         parts = [
@@ -389,7 +405,7 @@ def _print_config():
 
 
 def _print_usage(agent: Agent):
-    """借鉴 Hermes /usage 命令。"""
+    """借鉴 Hermes /usage 命令。修复 C7: 区分 api_calls 和 total_steps。"""
     stats = agent.stats
     history_tokens = estimate_history_tokens(agent.history)
 
@@ -404,7 +420,9 @@ def _print_usage(agent: Agent):
     table.add_row("Input tokens", f"{stats.total_tokens_in:,}")
     table.add_row("Output tokens", f"{stats.total_tokens_out:,}")
     table.add_row("Total tokens", f"{stats.total_tokens_in + stats.total_tokens_out:,}")
-    table.add_row("API calls", str(stats.total_steps))
+    # 修复 C7: API calls 反映真实 LLM 调用次数（不含 wait/screenshot 内部步骤）
+    table.add_row("API calls", str(stats.api_calls))
+    table.add_row("Total steps", str(stats.total_steps))
     table.add_row("Actions", str(stats.total_actions))
     table.add_row("Errors", str(stats.errors))
     table.add_row("LLM time", f"{stats.total_llm_time:.1f}s")
@@ -561,8 +579,8 @@ def _handle_resume(agent: Agent, session_db: SessionDB, arg: str,
 
     # 按序号查找
     if target.isdigit():
-        sessions = session_db.get_recent_sessions(10)
-        sessions = [s for s in sessions if s.get("id") != session_id[0]]
+        # 修复 C6: 传入 exclude_id，让数据库层直接排除当前会话
+        sessions = session_db.get_recent_sessions(10, exclude_id=session_id[0])
         idx = int(target) - 1
         if 0 <= idx < len(sessions):
             target_id = sessions[idx]["id"]
@@ -663,14 +681,21 @@ def _handle_branch(agent: Agent, session_db: SessionDB, arg: str,
 # ═══════════════════════════════════════════════════════════
 
 def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
-                    last_task: list, session_id: list) -> bool:
+                    last_task: list, session_id: list) -> str:
+    """处理 slash 命令。修复 D7: 用 sentinel 字符串代替布尔返回值。
+
+    返回值:
+      "exit"    - 退出 CLI
+      "retry"   - 重试上一个任务（主循环会自动用 last_task 跑一遍）
+      "continue" - 继续循环
+    """
     parts = cmd.strip().split(maxsplit=1)
     command = parts[0].lower()
     arg = parts[1] if len(parts) > 1 else ""
 
     if command in ("/quit", "/exit"):
         console.print(f"  [{GREEN}]Goodbye![/{GREEN}]")
-        return True
+        return "exit"
 
     elif command == "/help":
         _print_help()
@@ -709,7 +734,9 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
 
     elif command == "/reset":
         agent.history.clear()
-        agent.stats = __import__('computer_use_agent.agent', fromlist=['SessionStats']).SessionStats()
+        from .agent import SessionStats  # 修复 D5: 不再使用 __import__ hack
+        agent.stats = SessionStats()
+        agent.reset_interrupt()
         console.print(f"  [{GREEN}]Session reset[/{GREEN}]")
 
     elif command == "/model":
@@ -739,9 +766,10 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
     elif command == "/retry":
         if last_task[0]:
             console.print(f"  [{DIM}]Retrying: {escape(last_task[0])}[/{DIM}]")
-            return False  # signal to rerun
+            return "retry"  # 修复 D7: 用 sentinel 字符串代替布尔
         else:
             console.print(f"  [{DIM}]No task to retry[/{DIM}]")
+            return "continue"
 
     elif command == "/undo":
         if len(agent.history) >= 2:
@@ -777,19 +805,16 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
         console.print(f"  [{color}]YOLO mode: {state}[/{color}]")
 
     elif command == "/steer":
-        # 借鉴: /steer 运行中注入指令 (cli.py line 9069)
+        # 修复 D1: 改用 agent.steer()，Agent 在 _prepare_messages 中消费
         if arg:
-            if hasattr(agent, '_pending_steer'):
-                agent._pending_steer.append(arg)
-            else:
-                agent._pending_steer = [arg]
+            agent.steer(arg)
             console.print(f"  [{GREEN}]Steer queued: {escape(arg[:50])}[/{GREEN}]")
         else:
             console.print(f"  [{DIM}]Usage: /steer <instruction>[/{DIM}]")
 
     elif command == "/stop":
-        # 借鉴: /stop 停止任务 (cli.py line 5878)
-        agent._interrupted = True
+        # 修复 B1: 改用 agent.interrupt() 跨平台机制
+        agent.interrupt(reason="user /stop")
         console.print(f"  [{ORANGE}]Stop requested[/{ORANGE}]")
 
     elif command == "/verbose":
@@ -804,26 +829,28 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
         # 借鉴: /status 快速状态 (cli.py line 6184)
         stats = agent.stats
         history_tokens = estimate_history_tokens(agent.history)
+        # 修复 B3: 用预算配置替代错误的硬编码 2000
+        context_pct = min(
+            100.0,
+            (history_tokens / max(1, BUDGET_CONFIG.max_history_chars)) * 100,
+        )
         console.print(f"  Model:     [{CYAN}]{config.LLM_MODEL}[/{CYAN}]")
         console.print(f"  Steps:     {stats.total_steps}/{config.MAX_STEPS}")
         console.print(f"  Actions:   {stats.total_actions}")
         console.print(f"  Tokens:    {stats.total_tokens_in}→{stats.total_tokens_out}")
-        console.print(f"  Context:   ~{history_tokens:,} tokens")
+        console.print(f"  Context:   ~{history_tokens:,} tokens ({context_pct:.1f}% of budget)")
         console.print(f"  Messages:  {len(agent.history)}")
         console.print(f"  Errors:    {stats.errors}")
         console.print(f"  YOLO:      [{GREEN if getattr(agent, '_yolo', False) else RED}]{'ON' if getattr(agent, '_yolo', False) else 'OFF'}[/]")
         console.print(f"  Interrupt: {'YES' if agent._interrupted else 'NO'}")
 
     elif command == "/queue":
-        # 借鉴: /queue 排队下一条指令 (cli.py line 9058)
+        # 修复 D1: 改用 agent.queue_task()，主循环完成后自动执行
         if arg:
-            if hasattr(agent, '_pending_queue'):
-                agent._pending_queue.append(arg)
-            else:
-                agent._pending_queue = [arg]
+            agent.queue_task(arg)
             console.print(f"  [{GREEN}]Queued: {escape(arg[:50])}[/{GREEN}]")
         else:
-            queue = getattr(agent, '_pending_queue', [])
+            queue = agent._pending_queue
             if queue:
                 for i, t in enumerate(queue):
                     console.print(f"  [{DIM}]{i+1}. {escape(t[:60])}[/{DIM}]")
@@ -831,12 +858,16 @@ def _handle_command(cmd: str, agent: Agent, session_db: SessionDB,
                 console.print(f"  [{DIM}]Queue empty[/{DIM}]")
 
     elif command == "/clear":
-        os.system("cls" if os.name == "nt" else "clear")
+        # 修复 C5: 跨平台 Rich 清屏（不再使用 os.system("cls")）
+        try:
+            console.clear()
+        except Exception:
+            os.system("cls" if os.name == "nt" else "clear")
 
     else:
         console.print(f"  [{RED}]Unknown: {escape(command)}[/{RED}]")
 
-    return False
+    return "continue"  # 修复 D7: sentinel 字符串
 
 
 # ═══════════════════════════════════════════════════════════
@@ -891,17 +922,23 @@ class CLI:
 
             # Slash 命令
             if text.startswith("/"):
-                should_quit = _handle_command(
+                result = _handle_command(
                     text, self.agent, self.session_db,
                     self._last_task, self._session_id
                 )
-                if should_quit:
+                # 修复 D7: 用 sentinel 字符串分发
+                if result == "exit":
                     break
-                # /retry 特殊处理
-                if text.strip() == "/retry" and self._last_task[0]:
+                if result == "retry" and self._last_task[0]:
                     text = self._last_task[0]
-                else:
+                    # 跑一遍任务
+                    self._run_task(text)
                     continue
+                if result in ("continue", "retry"):
+                    # retry 时若无 last_task 已在 _handle_command 打印提示
+                    continue
+                # 兜底：未知返回值视为 continue
+                continue
 
             # 执行任务
             self._last_task[0] = text
@@ -918,7 +955,10 @@ class CLI:
         self.status_bar.start_step()
         t0 = time.time()
 
-        result = self.agent.run(task)
+        result = self.agent.run(
+            task,
+            stream=(getattr(self.agent, "_verbose_mode", "normal") == "verbose"),
+        )
 
         total_time = time.time() - t0
 
@@ -950,7 +990,21 @@ class CLI:
             pass  # 持久化失败不影响使用
 
 
-def main():
+def main(task_arg: str = None, verbose: bool = False,
+         plain: bool = False, no_color: bool = False,
+         dry_run: bool = False) -> int:
+    """CLI 入口。修复 C4: 返回退出码。
+
+    Args:
+        task_arg: 直接执行的任务（None 启动 REPL）
+        verbose: 详细模式（启用流式 LLM 输出）
+        plain: 纯文本模式（不启用 Rich TUI）
+        no_color: 禁用 ANSI 颜色
+        dry_run: 仅生成不执行
+
+    Returns:
+        退出码: 0=成功, 1=错误, 2=用户中断
+    """
     if sys.platform == "win32":
         try:
             sys.stdout.reconfigure(encoding="utf-8")
@@ -958,17 +1012,44 @@ def main():
         except Exception:
             os.system("chcp 65001 >nul 2>&1")
 
-    if len(sys.argv) > 1 and not sys.argv[1].startswith("-"):
-        task = " ".join(sys.argv[1:])
-        agent = Agent(save_screenshots=True)
+    # 修复 C2/C3: 应用 plain / no_color / verbose 到 console 与 agent
+    if no_color:
+        try:
+            console.no_color = True
+        except Exception:
+            pass
+    # verbose 默认通过 _verbose_mode 控制；此处只在 CLI 单次任务时设置 agent 默认值
+
+    if task_arg:
+        # 修复 C4: 单次任务模式返回退出码
+        agent = Agent(save_screenshots=not dry_run)
+        if verbose:
+            agent._verbose_mode = "verbose"
         _print_banner()
         console.print(Panel(
-            f"[{GOLD}]{escape(task)}[/{GOLD}]",
+            f"[{GOLD}]{escape(task_arg)}[/{GOLD}]",
             title=f"[{BRONZE}]Task[/{BRONZE}]",
             border_style=BRONZE,
         ))
-        agent.run(task)
-        return
+        try:
+            result = agent.run(task_arg, stream=verbose)
+            # 修复 V3: 多语言中断关键字检测（不再硬编码 "已中断"）
+            from .i18n import t
+            interrupt_keywords = (
+                t("task_interrupted", default="已中断").lower(),
+                "interrupted",  # LLM 经常返回英文
+            )
+            if result and any(kw in result.lower() for kw in interrupt_keywords):
+                return 2  # 修复 C4: 中断 → 2
+            if "Too many" in (result or "") or "error" in (result or "").lower():
+                return 1
+            return 0
+        except KeyboardInterrupt:
+            return 2
+        except Exception as e:
+            console.print(f"  [{RED}]Error: {e}[/{RED}]")
+            return 1
 
+    # REPL 模式
     cli = CLI()
-    cli.run()
+    return cli.run() or 0

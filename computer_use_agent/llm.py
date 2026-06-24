@@ -9,17 +9,21 @@ from . import config
 
 
 _client: OpenAI | None = None
+# 修复 S4: 客户端单例的线程安全
+_client_lock = threading.Lock()
 
 
 def get_client() -> OpenAI:
-    """获取或创建 OpenAI 客户端（单例）。"""
+    """获取或创建 OpenAI 客户端（单例，线程安全）。"""
     global _client
     if _client is None:
-        _client = OpenAI(
-            api_key=config.LLM_API_KEY,
-            base_url=config.LLM_BASE_URL,
-            timeout=config.REQUEST_TIMEOUT,
-        )
+        with _client_lock:
+            if _client is None:  # 双重检查锁
+                _client = OpenAI(
+                    api_key=config.LLM_API_KEY,
+                    base_url=config.LLM_BASE_URL,
+                    timeout=config.REQUEST_TIMEOUT,
+                )
     return _client
 
 
@@ -318,6 +322,7 @@ def _parse_action(
     """解析 LLM 返回的 JSON 动作。
 
     借鉴 Hermes message_sanitization.py 的 5 级 JSON 修复级联。
+    修复 B5: 当 JSON 解析失败时显式设置 _error=True，让 agent 计入连续错误。
     """
     from .sanitization import repair_json
 
@@ -332,15 +337,18 @@ def _parse_action(
     end = text.rfind("}") + 1
     json_text = text[start:end] if start != -1 and end > start else text
 
+    parse_failed = False
     # 借鉴: 5 级 JSON 修复级联
     repaired = repair_json(json_text)
     try:
         action = json.loads(repaired)
     except json.JSONDecodeError:
         action = {}
+        parse_failed = True
 
     # 修复后如果缺少 action 字段，补上 wait
     if "action" not in action:
+        parse_failed = True
         action = {
             "thought": f"JSON missing action field: {raw[:200]}",
             "action": "wait",
@@ -351,4 +359,8 @@ def _parse_action(
     action["_tokens_in"] = tokens_in
     action["_tokens_out"] = tokens_out
     action["_raw"] = raw
+    # 修复 B5: JSON 解析失败时标记错误，让 agent 的连续错误计数生效
+    if parse_failed:
+        action["_error"] = True
+        action["_error_reason"] = "json_parse_failed"
     return action

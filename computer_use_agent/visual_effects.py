@@ -144,9 +144,10 @@ class VisualOverlay:
                     elif etype == "drag" and age < 3.0:
                         self._draw_drag_indicator(hdc, data, age)
                         active_effects.append(effect)
-                    elif etype == "info":
+                    elif etype == "info" and age < 3.0:  # 修复 V1: info 效果 3s TTL
+                        self._draw_info_panel(hdc, data, age)
                         active_effects.append(effect)
-                    elif etype in ("click", "drag"):
+                    elif etype in ("click", "drag", "info"):
                         pass  # expired
                     else:
                         active_effects.append(effect)
@@ -252,6 +253,95 @@ class VisualOverlay:
         gdi32.LineTo(hdc, ax2, ay2)
         gdi32.SelectObject(hdc, old_pen)
         gdi32.DeleteObject(pen)
+
+    def _draw_info_panel(self, hdc, data, age):
+        """修复 V1: 绘制动作信息面板 - 半透明圆角矩形 + 文本。
+
+        显示当前正在执行的动作（含坐标），3s 后淡出。
+        """
+        action, thought, coords = data
+
+        # 动画：3s 内从 0% 渐变到 100% 透明度，然后淡出
+        if age < 0.3:
+            alpha = age / 0.3  # 0.0 -> 1.0
+        elif age < 2.7:
+            alpha = 1.0
+        else:
+            alpha = max(0, (3.0 - age) / 0.3)  # 1.0 -> 0.0
+
+        # 面板位置：屏幕底部居中
+        sw = user32.GetSystemMetrics(0)
+
+        # 构建文本行
+        lines = [action]
+        if coords:
+            lines.append(f"📍 {coords}")
+        if thought:
+            thought_short = thought if len(thought) <= 60 else thought[:57] + "..."
+            lines.append(f"💭 {thought_short}")
+
+        # 估算面板尺寸（每字符 ~8px 宽）
+        max_line_len = max(len(line) for line in lines)
+        panel_w = min(max_line_len * 8 + 40, sw - 40)
+        panel_h = len(lines) * 22 + 30
+
+        # 居中底部
+        px = (sw - panel_w) // 2
+        py = 60  # 距顶部 60px（避免被任务栏遮挡）
+
+        # 背景：深色半透明圆角矩形
+        # Win32 GDI 没有圆角矩形 API，使用 GDI+ 或画两次矩形模拟
+        bg_alpha = int(alpha * 200)  # 0-200 alpha
+        bg_color = (0x33 << 16) | (0x33 << 8) | 0x40  # 深紫蓝色 #333340
+        brush = gdi32.CreateSolidBrush(bg_color)
+        old_brush = gdi32.SelectObject(hdc, brush)
+        gdi32.RoundRect(hdc, px, py, px + panel_w, py + panel_h, 12, 12)
+        gdi32.SelectObject(hdc, old_brush)
+        gdi32.DeleteObject(brush)
+
+        # 边框：金色
+        border_color = int(alpha * 0xFF) << 16 | int(alpha * 0xD7) << 8 | 0
+        pen = gdi32.CreatePen(0, 2, border_color)
+        old_pen = gdi32.SelectObject(hdc, pen)
+        old_brush = gdi32.SelectObject(hdc, gdi32.GetStockObject(5))  # hollow
+        gdi32.RoundRect(hdc, px, py, px + panel_w, py + panel_h, 12, 12)
+        gdi32.SelectObject(hdc, old_brush)
+        gdi32.SelectObject(hdc, old_pen)
+        gdi32.DeleteObject(pen)
+
+        # 文本 - 使用 GDI 默认字体
+        font = gdi32.GetStockObject(17)  # SYSTEM_FONT
+        old_font = gdi32.SelectObject(hdc, font)
+
+        # 文本颜色（白色）
+        text_color = int(alpha * 0xFF) << 16 | int(alpha * 0xFF) << 8 | int(alpha * 0xFF)
+        gdi32.SetTextColor(hdc, text_color)
+        gdi32.SetBkMode(hdc, 1)  # TRANSPARENT
+
+        text_y = py + 12
+        for line in lines:
+            # 第一行加粗（动作名）
+            if line == lines[0]:
+                bold_font = gdi32.CreateFontW(
+                    20, 0, 0, 0, 700,  # FW_BOLD = 700
+                    0, 0, 0, 0, 0, 0, 0, 0,
+                    "Segoe UI",
+                )
+                gdi32.SelectObject(hdc, bold_font)
+                gdi32.TextOutW(hdc, px + 20, text_y, line, len(line))
+                gdi32.SelectObject(hdc, font)
+                gdi32.DeleteObject(bold_font)
+            else:
+                # 普通行灰色
+                gray = int(alpha * 0xCC)
+                gray_color = (gray << 16) | (gray << 8) | gray
+                gdi32.SetTextColor(hdc, gray_color)
+                gdi32.TextOutW(hdc, px + 20, text_y, line, len(line))
+                # 恢复白色
+                gdi32.SetTextColor(hdc, text_color)
+            text_y += 22
+
+        gdi32.SelectObject(hdc, old_font)
 
 
 # ═══════════════════════════════════════════════════════════

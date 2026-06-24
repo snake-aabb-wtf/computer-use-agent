@@ -1,0 +1,200 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "computer-use-agent"
+version = "0.2.0"
+description = "AI-powered desktop automation through screenshots and actions"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [
+    { name = "snake-aabb-wtf", email = "snake.aabb.wtf@example.com" },
+]
+keywords = [
+    "automation",
+    "desktop",
+    "ai-agent",
+    "llm",
+    "openai",
+    "computer-use",
+    "ui-tars",
+    "mcp",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Automation",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.0",
+    "pyautogui>=0.9",
+    "Pillow>=10.0",
+    "python-dotenv>=1.0",
+    "pydantic-settings>=2.0",
+    "rich>=14.0",
+    "prompt_toolkit>=3.0",
+    "uiautomation>=2.0; sys_platform == 'win32'",
+    "mss>=9.0",
+]
+
+[project.optional-dependencies]
+# Linux 桌面支持（X11 / Xvfb）
+linux = [
+    "python-xlib>=0.33",
+    "xdotool>=0.0.1",
+]
+# macOS 额外支持
+macos = [
+    "pyobjc-framework-Quartz>=10.0",
+]
+# 完整开发依赖
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=4.1",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "types-Pillow>=10.0",
+]
+# MCP Server 增强
+mcp = [
+    "pydantic>=2.0",
+]
+# 全部可选依赖
+all = [
+    "computer-use-agent[linux,macos,dev,mcp]",
+]
+
+[project.scripts]
+# 主 CLI
+cua = "computer_use_agent.__main__:main_entry"
+# 仅 HTTP API 服务
+cua-serve = "computer_use_agent.api:serve"
+# MCP Server
+cua-mcp = "computer_use_agent.mcp_server:run_mcp_server"
+
+[project.urls]
+Homepage = "https://github.com/snake-aabb-wtf/computer-use-agent"
+Documentation = "https://github.com/snake-aabb-wtf/computer-use-agent/blob/main/README.md"
+Repository = "https://github.com/snake-aabb-wtf/computer-use-agent.git"
+Issues = "https://github.com/snake-aabb-wtf/computer-use-agent/issues"
+Changelog = "https://github.com/snake-aabb-wtf/computer-use-agent/blob/main/CHANGELOG.md"
+
+[project.entry-points."computer_use_agent.plugins"]
+# 未来可声明 entry point 让用户 pip install 自动注册插件
+
+[tool.hatch.build.targets.wheel]
+packages = ["computer_use_agent"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "computer_use_agent/",
+    "tests/",
+    "README.md",
+    "README_CN.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "requirements.txt",
+]
+
+# ── ruff 配置 ──
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["tests/legacy"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "PTH", # use Pathlib
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "E501",  # line-too-long (handled by formatter)
+    "B008",  # do not perform function calls in argument defaults
+    "N818",  # exception name should end in Error
+    "RUF012", # mutable class attributes
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["N", "E402", "B011"]
+"computer_use_agent/cli.py" = ["E402"]  # late imports in main module
+
+# ── mypy 配置 ──
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+exclude = [
+    "tests/legacy/",
+    "build/",
+    "dist/",
+]
+
+# ── pytest 配置 ──
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--tb=short",
+    "--disable-warnings",
+]
+markers = [
+    "slow: 慢速测试 (deselect with -m 'not slow')",
+    "integration: 集成测试 (需要 LLM key)",
+    "linux: Linux 专用测试",
+    "windows: Windows 专用测试",
+    "macos: macOS 专用测试",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.coverage.run]
+source = ["computer_use_agent"]
+omit = [
+    "computer_use_agent/__main__.py",
+    "computer_use_agent/mcp_server.py",
+    "tests/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+show_missing = true
+precision = 1

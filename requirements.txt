@@ -6,3 +6,4 @@ pydantic-settings>=2.0
 rich>=14.0
 prompt_toolkit>=3.0
 uiautomation>=2.0
+mss>=9.0

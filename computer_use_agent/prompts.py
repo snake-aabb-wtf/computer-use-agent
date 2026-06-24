@@ -338,9 +338,45 @@ _GOOGLE_SPECIFIC = """# Operational Directives (Gemini/Gemma)
 
 
 # ═══════════════════════════════════════════════════════════
-# CLI 平台指引（借鉴 Hermes platform hints）
+# CLI 平台指引（修复 V2: 借鉴 Hermes platform hints）
 # ═══════════════════════════════════════════════════════════
 
+_PLATFORM_HINT_WINDOWS = """\
+[Platform: Windows]
+- Use 'enter' (not 'return') for the Enter key
+- For Save dialogs: 'ctrl+s' typically opens save; 'alt+f4' closes window
+- For Task Manager: 'ctrl+shift+esc'
+- Screenshot key: 'print_screen' or 'win+shift+s' for region
+- File path separator: backslash (e.g. C:\\\\Users\\\\name)
+- Copy/Paste: 'ctrl+c' / 'ctrl+v' (clipboard is required for CJK paste)
+- Cancel dialog: 'escape'
+- Window switch: 'alt+tab' or 'win+tab'"""
+
+_PLATFORM_HINT_MACOS = """\
+[Platform: macOS]
+- Use 'return' (not 'enter') for the Enter key
+- Cmd key replaces Ctrl: 'cmd+c' / 'cmd+v' / 'cmd+s'
+- Quit: 'cmd+q'; Force quit: 'cmd+option+esc'
+- Screenshot: 'cmd+shift+3' (full) / 'cmd+shift+4' (region)
+- File path separator: forward slash (e.g. /Users/name)
+- Cancel dialog: 'escape'
+- Window switch: 'cmd+tab'"""
+
+_PLATFORM_HINT_LINUX = """\
+[Platform: Linux]
+- Use 'return' for the Enter key
+- Copy/Paste: 'ctrl+c' / 'ctrl+v' (clipboard is required for CJK paste)
+- Screenshot: 'print_screen' or use the desktop's screenshot tool
+- File path separator: forward slash (e.g. /home/name)
+- Terminal open: 'ctrl+alt+t' (Ubuntu/Debian)
+- Cancel dialog: 'escape'
+- Window switch: 'alt+tab'"""
+
+_PLATFORM_HINTS = {
+    "Windows": _PLATFORM_HINT_WINDOWS,
+    "Darwin": _PLATFORM_HINT_MACOS,
+    "Linux": _PLATFORM_HINT_LINUX,
+}
 
 
 def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
@@ -372,6 +408,16 @@ def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode=
         build_environment_context(screen_width, screen_height),
     ]
 
+    # 修复 V2: 注入平台特定的键盘 / 快捷键 hint
+    try:
+        import platform as _platform
+        sysname = _platform.system()
+        platform_hint = _PLATFORM_HINTS.get(sysname, "")
+        if platform_hint:
+            parts.append(platform_hint)
+    except Exception:
+        pass
+
     # 模型特定指令
     model_lower = model.lower() if model else ""
     if any(m in model_lower for m in ("gpt", "codex", "grok")):
@@ -383,11 +429,19 @@ def build_system_prompt(screen_width=0, screen_height=0, model="", capture_mode=
 
 
 _PROMPT_CACHE: dict = {}
+# 修复 S4: prompt 缓存线程安全
+import threading as _threading
+_PROMPT_CACHE_LOCK = _threading.Lock()
 
 
 def get_system_prompt(screen_width=0, screen_height=0, model="", capture_mode="vision"):
-    """获取系统提示词（带缓存，按参数区分）。"""
+    """获取系统提示词（带缓存，按参数区分；线程安全）。"""
     cache_key = (screen_width, screen_height, model, capture_mode)
+    # 双重检查锁
     if cache_key not in _PROMPT_CACHE:
-        _PROMPT_CACHE[cache_key] = build_system_prompt(screen_width, screen_height, model, capture_mode)
+        with _PROMPT_CACHE_LOCK:
+            if cache_key not in _PROMPT_CACHE:
+                _PROMPT_CACHE[cache_key] = build_system_prompt(
+                    screen_width, screen_height, model, capture_mode
+                )
     return _PROMPT_CACHE[cache_key]

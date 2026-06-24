@@ -11,8 +11,29 @@ import platform
 import pyautogui
 
 # pyautogui 安全设置
-pyautogui.FAILSAFE = False
+# 修复 B6: FAILSAFE 改为可配置（默认 False；启用 FAILSAFE 时把鼠标移到屏幕角落可紧急停止）
+# 警告：pyautogui.FAILSAFE 启用后会让自动化在鼠标撞角时崩溃，仅在你需要"硬件 kill switch"时打开
+import os as _os
+
+def _resolve_pyautogui_failsafe() -> bool:
+    """从 PYAUTOGUI_FAILSAFE 环境变量解析（默认 False）。"""
+    raw = _os.getenv("PYAUTOGUI_FAILSAFE")
+    if raw is None:
+        return False
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+pyautogui.FAILSAFE = _resolve_pyautogui_failsafe()
 pyautogui.PAUSE = 0
+
+
+# 修复 F8.1: i18n 辅助
+def _i(key: str, *args) -> str:
+    """获取国际化字符串（fallback 到中文）。"""
+    try:
+        from .i18n import t
+        return t(key, *args) if args else t(key)
+    except Exception:
+        return key
 
 # ═══════════════════════════════════════════════════════════
 # 动作名称归一化 (借鉴 UI-TARS actionTypeMap)
@@ -132,20 +153,26 @@ def _show_action_info(action: str, thought: str = "", coords: str = ""):
 
 
 # SOM 元素缓存 - 由 agent.py 设置
+# 修复 S4: 加锁保护
+import threading as _threading
 _som_elements: list = []
+_som_lock = _threading.Lock()
 
 
 def set_som_elements(elements: list):
     """设置当前 SOM 元素列表，供 executor 解析 element=N。"""
     global _som_elements
-    _som_elements = elements
+    with _som_lock:
+        _som_elements = list(elements) if elements else []
 
 
 def _resolve_click_target(action: dict) -> tuple[int, int]:
     """解析点击目标：优先 element=N，fallback 到 coordinate=[x,y]。"""
     if "element" in action:
         elem_idx = action["element"]
-        for elem in _som_elements:
+        with _som_lock:
+            elements_snapshot = list(_som_elements)
+        for elem in elements_snapshot:
             if elem.index == elem_idx:
                 return elem.center()
         # 找不到元素，fallback 到屏幕中心
@@ -162,8 +189,8 @@ def _type_text(text: str):
     - 短文本 (<=10字符): pyautogui.typewrite 快速输入
     - 长文本/含特殊字符: 剪贴板粘贴
     """
-    # 检测是否全是 ASCII 可打印字符
-    is_ascii = all(32 <= ord(c) <= 126 for c in text)
+    # 修复 D6: 把制表符和换行也视为可打印 ASCII（typewrite 不支持）
+    is_ascii = all(32 <= ord(c) <= 126 or c in "\t\n\r" for c in text)
 
     if is_ascii and len(text) <= 10:
         # 短 ASCII 文本直接打字
@@ -264,8 +291,8 @@ def execute(action: dict) -> str:
             time.sleep(0.15)
             pyautogui.click(x, y, button="left")
             if "element" in action:
-                return f"左键点击元素 #{action['element']} ({x}, {y})"
-            return f"左键点击 ({x}, {y})"
+                return _i("act_left_click_element", action['element'], x, y)
+            return _i("act_left_click", x, y)
 
         elif act == "double_click":
             x, y = _resolve_click_target(action)
@@ -274,8 +301,8 @@ def execute(action: dict) -> str:
             time.sleep(0.15)
             pyautogui.doubleClick(x, y)
             if "element" in action:
-                return f"双击元素 #{action['element']} ({x}, {y})"
-            return f"双击 ({x}, {y})"
+                return _i("act_double_click_element", action['element'], x, y)
+            return _i("act_double_click", x, y)
 
         elif act == "right_click":
             x, y = _resolve_click_target(action)
@@ -284,13 +311,13 @@ def execute(action: dict) -> str:
             time.sleep(0.15)
             pyautogui.rightClick(x, y)
             if "element" in action:
-                return f"右键点击元素 #{action['element']} ({x}, {y})"
-            return f"右键点击 ({x}, {y})"
+                return _i("act_right_click_element", action['element'], x, y)
+            return _i("act_right_click", x, y)
 
         elif act == "type":
             text = action["text"]
             _type_text(text)
-            return f"输入文本 ({len(text)} 字符)"
+            return _i("act_type_text", len(text))
 
         elif act == "key":
             key = _normalize_key(action["key"])
@@ -300,10 +327,10 @@ def execute(action: dict) -> str:
                 pyautogui.keyDown(key)
                 time.sleep(hold_time)
                 pyautogui.keyUp(key)
-                return f"长按 [{key}] {hold_time}s"
+                return _i("act_hold_key", key, hold_time)
             else:
                 pyautogui.press(key)
-                return f"按键 [{key}]"
+                return _i("act_press_key", key)
 
         elif act == "hotkey":
             keys = [_normalize_key(k) for k in action["keys"]]
@@ -318,12 +345,12 @@ def execute(action: dict) -> str:
             # 乘以 100 让 amount=5 等于滚动 500 个 click（约 10 页）
             clicks = -amount * 100 if direction == "down" else amount * 100
             pyautogui.scroll(clicks)
-            return f"滚动 {direction} ×{amount}"
+            return _i("act_scroll", direction, amount)
 
         elif act == "move":
             x, y = action["coordinate"]
             pyautogui.moveTo(x, y)
-            return f"移动鼠标到 ({x}, {y})"
+            return _i("act_move_mouse", x, y)
 
         elif act == "drag":
             fx, fy = action["from"]
@@ -342,15 +369,15 @@ def execute(action: dict) -> str:
                 pyautogui.moveTo(cx, cy)
                 time.sleep(0.02)
             pyautogui.mouseUp()
-            return f"拖拽 ({fx},{fy}) → ({tx},{ty}) hold={hold_time}s"
+            return _i("act_drag", fx, fy, tx, ty, hold_time)
 
         elif act == "wait":
             seconds = action.get("seconds", 1)
             time.sleep(seconds)
-            return f"等待 {seconds}s"
+            return _i("act_wait", seconds)
 
         elif act == "screenshot":
-            return "重新截图（无操作）"
+            return _i("act_screenshot")
 
         elif act == "done":
             msg = action.get("message", "任务完成")

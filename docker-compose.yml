@@ -1,0 +1,65 @@
+version: "3.9"
+
+services:
+  cua:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: computer-use-agent:latest
+    container_name: cua
+    restart: unless-stopped
+
+    # 启动 HTTP API 服务（xvfb-run 提供 X display）
+    command: >
+      sh -c "xvfb-run -a -s '-screen 0 1920x1080x24' cua --serve --host 0.0.0.0 --port 2024"
+
+    ports:
+      - "127.0.0.1:2024:2024"
+
+    environment:
+      # LLM 配置
+      LLM_API_KEY: ${LLM_API_KEY:?Set LLM_API_KEY in .env or environment}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://api.openai.com/v1}
+      LLM_MODEL: ${LLM_MODEL:-gpt-4o}
+      # 行为
+      CAPTURE_MODE: ${CAPTURE_MODE:-vision}
+      MAX_STEPS: ${MAX_STEPS:-200}
+      # 安全（强烈建议设置）
+      API_TOKEN: ${API_TOKEN:-}
+      # 持久化
+      LOG_DIR: /home/cua/.cua/logs
+      SCREENSHOT_DIR: /home/cua/.cua/screenshots
+      # i18n
+      LANGUAGE: ${LANGUAGE:-en-US}
+      # 日志格式
+      LOG_FORMAT: ${LOG_FORMAT:-text}
+      # Webhook
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_EVENTS: ${WEBHOOK_EVENTS:-done,error,interrupted}
+
+    volumes:
+      # 持久化日志与截图
+      - cua_logs:/home/cua/.cua/logs
+      - cua_screenshots:/home/cua/.cua/screenshots
+      # 挂载用户插件（可选）
+      - ./plugins:/home/cua/.config/cua/plugins:ro
+
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+
+    # 日志
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  cua_logs:
+  cua_screenshots:
