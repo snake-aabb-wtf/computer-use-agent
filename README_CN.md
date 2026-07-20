@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-orange.svg)](CHANGELOG.md)
+[![Version 0.2.1](https://img.shields.io/badge/version-0.2.1-orange.svg)](CHANGELOG.md)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
 
@@ -14,7 +14,7 @@ Windows / macOS / Linux 上的自动化操作。
 
 ---
 
-## ✨ v0.2.0 新特性
+## ✨ v0.2.1 新特性
 
 - **🔌 MCP Server** — 通过 [Model Context Protocol](https://modelcontextprotocol.io/)
   把 Claude Desktop、Cursor、Zed 直接连接到 CUA。暴露 5 个工具：
@@ -62,7 +62,7 @@ docker run -it --rm \
   -e LLM_BASE_URL=https://api.openai.com/v1 \
   -e LLM_MODEL=gpt-4o \
   -p 127.0.0.1:2024:2024 \
-  ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.0 \
+  ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.1 \
   cua --serve --host 0.0.0.0
 ```
 
@@ -411,7 +411,7 @@ computer-use-agent/
 ├── .github/workflows/        # CI / Release / CodeQL
 ├── Dockerfile + docker-compose.yml
 ├── pyproject.toml            # 4 个 console_scripts
-├── CHANGELOG.md              # v0.2.0 更新日志
+├── CHANGELOG.md              # v0.2.1 更新日志
 └── CONTRIBUTING.md
 ```
 
@@ -446,10 +446,10 @@ bandit -r computer_use_agent/ -ll
 
 ## 📦 分发渠道
 
-v0.2.0 通过 **GitHub Releases** 分发（不上 PyPI）：
+v0.2.1 通过 **GitHub Releases** 分发（不上 PyPI）：
 
-- 📥 **下载**: <https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.2.0>
-- 🐳 **Docker**: `docker pull ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.0`（多架构镜像）
+- 📥 **下载**: <https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.2.1>
+- 🐳 **Docker**: `docker pull ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.1`（多架构镜像）
 - 📦 **从源码构建**: `pip install -e .`（见[快速开始](#-快速开始)）
 
 PyPI 发布是**可选的**，默认禁用。如需启用：

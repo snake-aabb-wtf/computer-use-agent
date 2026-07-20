@@ -2,7 +2,7 @@
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version 0.2.0](https://img.shields.io/badge/version-0.2.0-orange.svg)](CHANGELOG.md)
+[![Version 0.2.1](https://img.shields.io/badge/version-0.2.1-orange.svg)](CHANGELOG.md)
 [![CI](https://img.shields.io/badge/CI-passing-brightgreen.svg)](.github/workflows/ci.yml)
 [![MCP](https://img.shields.io/badge/MCP-compatible-purple.svg)](https://modelcontextprotocol.io/)
 
@@ -14,7 +14,7 @@ natural-language tasks into automated actions on Windows, macOS, and Linux.
 
 ---
 
-## ✨ What's new in v0.2.0
+## ✨ What's new in v0.2.1
 
 - **🔌 MCP Server** — Connect Claude Desktop, Cursor, Zed directly to CUA via the
   [Model Context Protocol](https://modelcontextprotocol.io/). 5 tools exposed:
@@ -62,7 +62,7 @@ docker run -it --rm \
   -e LLM_BASE_URL=https://api.openai.com/v1 \
   -e LLM_MODEL=gpt-4o \
   -p 127.0.0.1:2024:2024 \
-  ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.0 \
+  ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.1 \
   cua --serve --host 0.0.0.0
 ```
 
@@ -418,7 +418,7 @@ computer-use-agent/
 ├── .github/workflows/        # CI / Release / CodeQL
 ├── Dockerfile + docker-compose.yml
 ├── pyproject.toml            # 4 console_scripts
-├── CHANGELOG.md              # v0.2.0 release notes
+├── CHANGELOG.md              # v0.2.1 release notes
 └── CONTRIBUTING.md
 ```
 
@@ -452,10 +452,10 @@ CI runs automatically on every push:
 
 ## 📦 Distribution
 
-v0.2.0 is distributed via **GitHub Releases** only (not PyPI):
+v0.2.1 is distributed via **GitHub Releases** only (not PyPI):
 
-- 📥 **Download**: <https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.2.0>
-- 🐳 **Docker**: `docker pull ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.0` (multi-arch image)
+- 📥 **Download**: <https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.2.1>
+- 🐳 **Docker**: `docker pull ghcr.io/snake-aabb-wtf/computer-use-agent:0.2.1` (multi-arch image)
 - 📦 **Build from source**: `pip install -e .` (see [Quick start](#-quick-start))
 
 PyPI publishing is **opt-in** and disabled by default. To enable:

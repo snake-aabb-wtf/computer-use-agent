@@ -37,13 +37,17 @@ from .logger import setup_logger
 
 logger = logging.getLogger("agent.api")
 
+_MAX_REQUEST_BODY_BYTES = 1 * 1024 * 1024
+
 # ── 任务管理 ──
 
 _task_queue: queue.Queue = queue.Queue()
 _task_results: dict[str, dict] = {}   # id -> {status, result, error, finished_at}
-_task_lock = threading.Lock()
+# RLock keeps the legacy cancel handler safe while it delegates to
+# _stop_current(), which also updates task state under this lock.
+_task_lock = threading.RLock()
 _current_task_id: str | None = None
-_active_agent: Agent | None = None  # 修复 B2: 把 agent 提升为模块级单例
+_active_agent: Agent | None = None  # Agent for the currently running task
 _active_agent_lock = threading.Lock()
 _running = False
 
@@ -76,52 +80,63 @@ def _worker():
     """后台 worker 线程：从队列取任务，执行 agent，记录结果。"""
     global _current_task_id, _active_agent
 
-    # 修复 B2: agent 提升为模块级，_stop_current() 可通过 _active_agent 中断
-    agent = Agent(save_screenshots=True)
-    with _active_agent_lock:
-        _active_agent = agent
-
+    # Keep the active Agent visible so /stop can interrupt it safely.
     while True:
         task_id, task_text = _task_queue.get()
         if task_id is None:
+            _task_queue.task_done()
             break
 
-        with _task_lock:
-            _current_task_id = task_id
-            _task_results[task_id] = {
-                "status": "running",
-                "result": None,
-                "error": None,
-                "task": task_text,
-                "started_at": time.time(),
-                "finished_at": None,
-            }
-
         try:
+            with _task_lock:
+                info = _task_results.get(task_id)
+                # A queued task can be cancelled without removing its queue item.
+                if info is None or info.get("status") == "cancelled":
+                    continue
+                info.update(status="running", started_at=time.time())
+                _current_task_id = task_id
+
+            # Keep task histories isolated. Reusing one Agent would leak prior
+            # task context to the next LLM request.
+            agent = Agent(save_screenshots=True)
+            with _active_agent_lock:
+                _active_agent = agent
+
+            with _task_lock:
+                info = _task_results.get(task_id)
+                if info is None or info.get("status") == "cancelled":
+                    continue
+
             result = agent.run(task_text)
             with _task_lock:
-                _task_results[task_id] = {
-                    "status": "done",
-                    "result": result,
-                    "error": None,
-                    "task": task_text,
-                    "started_at": _task_results[task_id]["started_at"],
-                    "finished_at": time.time(),
-                }
+                info = _task_results.get(task_id)
+                # _stop_current() marks cancellation immediately. Preserve that
+                # terminal state when the interrupted agent returns.
+                if info is not None and info.get("status") != "cancelled":
+                    info.update(
+                        status="done",
+                        result=result,
+                        error=None,
+                        finished_at=time.time(),
+                    )
         except Exception as e:
             with _task_lock:
-                _task_results[task_id] = {
-                    "status": "error",
-                    "result": None,
-                    "error": str(e),
-                    "task": task_text,
-                    "started_at": _task_results[task_id]["started_at"],
-                    "finished_at": time.time(),
-                }
+                info = _task_results.get(task_id)
+                if info is not None and info.get("status") != "cancelled":
+                    info.update(
+                        status="error",
+                        result=None,
+                        error=str(e),
+                        finished_at=time.time(),
+                    )
         finally:
+            with _active_agent_lock:
+                _active_agent = None
             with _task_lock:
-                _current_task_id = None
+                if _current_task_id == task_id:
+                    _current_task_id = None
             _prune_old_results()
+            _task_queue.task_done()
 
 
 def _submit_task(task: str) -> str:
@@ -147,25 +162,27 @@ def _stop_current():
     Agent 在下个 step 检查点处停止。
     """
     global _current_task_id
+    task_id = None
     with _active_agent_lock:
         agent = _active_agent
-    if agent is not None:
-        agent.interrupt(reason="api /stop")
 
     with _task_lock:
-        if _current_task_id:
-            existing = _task_results.get(_current_task_id, {})
-            existing["status"] = "error"
-            existing["error"] = "Task stopped by user"
-            existing["finished_at"] = time.time()
-        _current_task_id = None
+        task_id = _current_task_id
+        if task_id:
+            existing = _task_results.get(task_id)
+            if existing is not None and existing.get("status") not in {
+                "done", "error", "cancelled"
+            }:
+                existing["status"] = "cancelled"
+                existing["error"] = "Task stopped by user"
+                existing["finished_at"] = time.time()
 
     # 清空待处理队列
-    while not _task_queue.empty():
-        try:
-            _task_queue.get_nowait()
-        except queue.Empty:
-            break
+    # Interrupt outside _task_lock to avoid lock re-entry from cancellation
+    # endpoints and to keep Agent implementations free to call back into API.
+    if agent is not None:
+        agent.interrupt(reason="api /stop")
+    return task_id
 
 
 def _is_local_host(host: str) -> bool:
@@ -182,7 +199,7 @@ def _is_local_host(host: str) -> bool:
 # ── HTTP Handler ──
 
 class _APIHandler(BaseHTTPRequestHandler):
-    server_version = "ComputerUseAgent/0.2"
+    server_version = "ComputerUseAgent/0.2.1"
 
     def log_message(self, fmt, *args):
         logger.debug(f"API: {fmt % args}")
@@ -237,13 +254,19 @@ class _APIHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _read_json(self) -> dict | None:
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+        except (TypeError, ValueError):
+            return None
         if length == 0:
             return None
-        try:
-            return json.loads(self.rfile.read(length))
-        except json.JSONDecodeError:
+        if length < 0 or length > _MAX_REQUEST_BODY_BYTES:
             return None
+        try:
+            data = json.loads(self.rfile.read(length))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            return None
+        return data if isinstance(data, dict) else None
 
     def do_OPTIONS(self):
         # 修复 B7: 收紧 CORS
@@ -315,7 +338,7 @@ class _APIHandler(BaseHTTPRequestHandler):
         if path == "/":
             self._send_json({
                 "service": "computer-use-agent",
-                "version": "0.2.0",
+                "version": "0.2.1",
                 "endpoints": {
                     "GET  /health": "服务状态",
                     "POST /run": "提交任务 {\"task\": \"...\"}",

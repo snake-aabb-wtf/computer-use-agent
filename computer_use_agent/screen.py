@@ -219,7 +219,7 @@ def capture_som():
     from .uia_tree import get_elements, render_som, image_to_base64, format_elements_text
     screenshot = _grab_image()  # 修复 F1: 使用多显示器感知的抓屏
     elements = get_elements(max_elements=100)
-    som_image = render_som(screenshot, elements)
+    som_image = render_som(screenshot, elements, offset=get_capture_origin())
     return (
         image_to_base64(som_image),
         elements,
@@ -234,6 +234,28 @@ def get_screen_size():
     if target:
         return (target["width"], target["height"])
     return ImageGrab.grab().size
+
+
+def get_capture_origin() -> tuple[int, int]:
+    """Return the desktop offset of the current capture target."""
+    target = _resolve_capture_target()
+    if target:
+        return int(target.get("left", 0)), int(target.get("top", 0))
+    return 0, 0
+
+
+def get_screenshot_mime_type() -> str:
+    """Return the MIME type matching the image sent to the model."""
+    if config.CAPTURE_MODE == "som":
+        return "image/png"
+    formats = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "webp": "image/webp",
+        "bmp": "image/bmp",
+    }
+    return formats.get(str(config.SCREENSHOT_FORMAT).lower(), "image/png")
 
 
 def get_screen_info() -> dict:

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-07-20
+
+### Fixed
+- HTTP task cancellation no longer deadlocks, executes cancelled queue items,
+  or leaves dropped tasks stuck in `queued` state.
+- HTTP API tasks now use isolated Agent histories instead of sharing context
+  between requests.
+- UI-TARS integer coordinates now scale against the active capture target,
+  including monitor/region offsets; screenshot MIME metadata matches the
+  configured image format.
+- SOM overlays now translate absolute UIA bounds into the selected monitor or
+  capture region before drawing.
+
 ## [0.2.0] - 2026-06-24
 
 ### Added
@@ -88,6 +101,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Hermes-style activity heartbeat
 - Hermetic/UI-TARS engineering patterns
 
-[Unreleased]: https://github.com/snake-aabb-wtf/computer-use-agent/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/snake-aabb-wtf/computer-use-agent/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/snake-aabb-wtf/computer-use-agent/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/snake-aabb-wtf/computer-use-agent/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/snake-aabb-wtf/computer-use-agent/releases/tag/v0.1.0

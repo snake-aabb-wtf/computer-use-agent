@@ -118,6 +118,9 @@ def chat(
     - 流式输出支持
     """
     client = get_client()
+    from .screen import get_screenshot_mime_type
+
+    screenshot_mime = get_screenshot_mime_type()
 
     # 构建消息
     messages = [{"role": "system", "content": system_prompt}]
@@ -128,7 +131,7 @@ def chat(
             {
                 "type": "image_url",
                 "image_url": {
-                    "url": f"data:image/png;base64,{screenshot_b64}",
+                    "url": f"data:{screenshot_mime};base64,{screenshot_b64}",
                     "detail": "high",
                 },
             },

@@ -58,8 +58,30 @@ _ACTION_MAP = {
 }
 
 
+def _ui_tars_geometry() -> tuple[int, int, int, int]:
+    """Return capture width, height, and desktop origin for UI-TARS coords."""
+    try:
+        from .screen import get_capture_origin, get_screen_size
+
+        width, height = get_screen_size()
+        left, top = get_capture_origin()
+        return int(width), int(height), int(left), int(top)
+    except Exception:
+        width, height = pyautogui.size()
+        return int(width), int(height), 0, 0
+
+
+def _scale_ui_tars_coordinate(value, size: int, offset: int):
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return value
+    value = max(0.0, min(1000.0, float(value)))
+    return int(value / 1000 * size) + offset
+
+
 def normalize_action(action: dict) -> dict:
     """归一化动作名称和坐标 (借鉴 UI-TARS)。"""
+    from . import config
+
     act = action.get("action", "")
     normalized = _ACTION_MAP.get(act.lower(), act)
     if normalized != act:
@@ -67,25 +89,37 @@ def normalize_action(action: dict) -> dict:
         action["action"] = normalized
 
     # 坐标归一化: 浮点数 0-1000 -> 实际像素
-    if "coordinate" in action:
+    if config.CAPTURE_MODE == "uitars" and "coordinate" in action:
         coord = action["coordinate"]
         if isinstance(coord, (list, tuple)) and len(coord) == 2:
-            x, y = coord
-            if isinstance(x, float) or isinstance(y, float):
-                sw, sh = pyautogui.size()
+            sw, sh, left, top = _ui_tars_geometry()
+            scaled = [
+                _scale_ui_tars_coordinate(coord[0], sw, left),
+                _scale_ui_tars_coordinate(coord[1], sh, top),
+            ]
+            if scaled != list(coord):
                 action = dict(action)
-                action["coordinate"] = [int(x / 1000 * sw), int(y / 1000 * sh)]
+                action["coordinate"] = scaled
 
     if "from" in action and "to" in action:
         fr = action["from"]
         to = action["to"]
-        if isinstance(fr, (list, tuple)) and isinstance(to, (list, tuple)):
-            sw, sh = pyautogui.size()
-            new_from, new_to = list(fr), list(to)
-            if isinstance(fr[0], float) or isinstance(fr[1], float):
-                new_from = [int(fr[0] / 1000 * sw), int(fr[1] / 1000 * sh)]
-            if isinstance(to[0], float) or isinstance(to[1], float):
-                new_to = [int(to[0] / 1000 * sw), int(to[1] / 1000 * sh)]
+        if (
+            config.CAPTURE_MODE == "uitars"
+            and isinstance(fr, (list, tuple))
+            and isinstance(to, (list, tuple))
+            and len(fr) == 2
+            and len(to) == 2
+        ):
+            sw, sh, left, top = _ui_tars_geometry()
+            new_from = [
+                _scale_ui_tars_coordinate(fr[0], sw, left),
+                _scale_ui_tars_coordinate(fr[1], sh, top),
+            ]
+            new_to = [
+                _scale_ui_tars_coordinate(to[0], sw, left),
+                _scale_ui_tars_coordinate(to[1], sh, top),
+            ]
             if new_from != list(fr) or new_to != list(to):
                 action = dict(action)
                 action["from"] = new_from

@@ -163,8 +163,9 @@ Response 200:
 {"status": "stopped"}
 ```
 
-Calls `Agent.interrupt()` via the worker thread; the task is marked as `error` with
-`"Task stopped by user"`.
+Calls `Agent.interrupt()` via the worker thread; the task reaches `cancelled` with
+`"Task stopped by user"`. Queued tasks remain in order and can be cancelled
+individually without being executed.
 
 #### `POST /cancel/<id>` — Cancel a specific task
 

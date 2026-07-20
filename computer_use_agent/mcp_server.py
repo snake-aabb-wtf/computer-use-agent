@@ -240,7 +240,7 @@ TOOL_DISPATCH = {
 
 SERVER_INFO = {
     "name": "computer-use-agent",
-    "version": "0.2.0",
+    "version": "0.2.1",
 }
 
 SERVER_CAPABILITIES = {

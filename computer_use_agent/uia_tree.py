@@ -127,7 +127,7 @@ def _simplify_role(class_name):
     return class_name[:20] if class_name else "Unknown"
 
 
-def render_som(screenshot, elements, max_elements=100, font_size=14):
+def render_som(screenshot, elements, max_elements=100, font_size=14, offset=(0, 0)):
     overlay = screenshot.copy()
     draw = ImageDraw.Draw(overlay, "RGBA")
     try:
@@ -136,6 +136,8 @@ def render_som(screenshot, elements, max_elements=100, font_size=14):
         font = ImageFont.load_default()
     for elem in elements[:max_elements]:
         x, y, w, h = elem.bounds
+        x -= offset[0]
+        y -= offset[1]
         if x < 0 or y < 0 or x > screenshot.width or y > screenshot.height:
             continue
         draw.rectangle([x, y, x + w, y + h], outline=(255, 0, 0, 200), width=2)
