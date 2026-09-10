@@ -332,7 +332,9 @@ def _dispatch_request(req: dict) -> Optional[dict]:
 
 def run_mcp_server() -> int:
     """MCP Server 主入口（stdio transport）。"""
-    setup_logger()
+    # MCP 使用 stdout 传输 JSON-RPC；日志必须走 stderr，否则启动日志和
+    # Agent 日志会混入响应流，导致客户端无法解析协议消息。
+    setup_logger(stream=sys.stderr)
     logger.info("MCP Server starting (stdio transport)...")
 
     # 启动 worker 线程

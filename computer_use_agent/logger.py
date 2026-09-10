@@ -109,20 +109,31 @@ def _redact_secrets(text: str) -> str:
 # Logger setup
 # ═══════════════════════════════════════════════════════════
 
-def setup_logger(name: str = "agent") -> logging.Logger:
+def setup_logger(name: str = "agent", stream=None) -> logging.Logger:
     """创建并配置 logger。
 
     修复 F6.1: 支持 LOG_FORMAT=json 输出结构化日志
     修复 F6.2: 使用 RotatingFileHandler (10MB × 5)
+
+    ``stream`` 用于需要严格控制 stdout 协议的调用方（例如 MCP stdio）。
+    默认仍写入 stdout，保持 CLI 的既有行为。
     """
     logger = logging.getLogger(name)
     if logger.handlers:
+        # MCP 可能在宿主进程已提前初始化 logger；显式指定 stream 时仍要
+        # 把已有的控制台 handler 从 stdout 切到指定流，避免污染协议输出。
+        if stream is not None:
+            for handler in logger.handlers:
+                if isinstance(handler, logging.StreamHandler) and not isinstance(
+                    handler, logging.FileHandler
+                ):
+                    handler.setStream(stream)
         return logger
 
     logger.setLevel(getattr(logging, config.LOG_LEVEL.upper(), logging.INFO))
 
     # 控制台输出（彩色 + 流式）
-    console = logging.StreamHandler(sys.stdout)
+    console = logging.StreamHandler(stream if stream is not None else sys.stdout)
     console.setLevel(logging.DEBUG)
     console.setFormatter(_ColorFormatter())
     logger.addHandler(console)

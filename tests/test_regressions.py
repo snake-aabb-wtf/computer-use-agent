@@ -134,3 +134,25 @@ def test_som_overlay_translates_desktop_coordinates_to_capture_region():
 
     red_pixel = rendered.getpixel((10, 20))
     assert red_pixel[0] > 200 and red_pixel[1] < 100
+
+
+def test_mcp_logger_stream_is_separate_from_stdout(monkeypatch, tmp_path):
+    import logging
+
+    from computer_use_agent.logger import setup_logger
+
+    stream = io.StringIO()
+    monkeypatch.setattr("computer_use_agent.config.LOG_DIR", str(tmp_path))
+    logger_name = "test_mcp_stdout_isolation"
+    logger = setup_logger(logger_name, stream=stream)
+    logger.info("protocol-safe log")
+
+    console_handlers = [
+        handler
+        for handler in logger.handlers
+        if isinstance(handler, logging.StreamHandler)
+        and not isinstance(handler, logging.FileHandler)
+    ]
+    assert console_handlers
+    assert console_handlers[0].stream is stream
+    assert "protocol-safe log" in stream.getvalue()
