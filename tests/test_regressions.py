@@ -241,6 +241,56 @@ def test_agent_dry_run_skips_action_execution(monkeypatch):
     assert preview_agent.stats.total_steps == 1
 
 
+def test_agent_writes_recording_events_for_completed_task(monkeypatch):
+    from computer_use_agent import agent as agent_module
+    from computer_use_agent import config
+
+    class FakeSink:
+        def __init__(self):
+            self.headers = []
+            self.steps = []
+            self.footers = []
+
+        def write_header(self, model, task):
+            self.headers.append((model, task))
+
+        def write_step(self, step, thought, action, result):
+            self.steps.append((step, thought, action, result))
+
+        def write_footer(self, status, result, total_steps):
+            self.footers.append((status, result, total_steps))
+
+    monkeypatch.setattr(config, "CAPTURE_MODE", "vision")
+    monkeypatch.setattr(config, "MAX_STEPS", 1)
+    monkeypatch.setattr(agent_module, "get_screen_size", lambda: (100, 100))
+    monkeypatch.setattr(agent_module, "capture", lambda: "screenshot-data")
+    monkeypatch.setattr(agent_module, "build_system_prompt", lambda *args: "prompt")
+    monkeypatch.setattr(
+        agent_module,
+        "chat",
+        lambda *args, **kwargs: {
+            "action": "done",
+            "message": "finished",
+            "thought": "task is complete",
+            "_raw": '{"action":"done","message":"finished"}',
+            "_elapsed": 0.01,
+        },
+    )
+
+    sink = FakeSink()
+    task_agent = agent_module.Agent(save_screenshots=False)
+    result = task_agent.run("finish the task", record_sink=sink)
+
+    assert result == "finished"
+    assert sink.headers == [(config.LLM_MODEL, "finish the task")]
+    assert len(sink.steps) == 1
+    assert sink.steps[0][0] == 1
+    assert sink.steps[0][1] == "task is complete"
+    assert sink.steps[0][2]["action"] == "done"
+    assert sink.steps[0][3] == "finished"
+    assert sink.footers == [("done", "finished", 1)]
+
+
 def test_plugin_action_is_exposed_in_prompt():
     from computer_use_agent.prompts import build_plugin_guidance
 

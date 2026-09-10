@@ -111,6 +111,10 @@ examples:
         help="仅生成动作不执行（需要 LLM）",
     )
     debug_group.add_argument(
+        "--record", metavar="FILE",
+        help="将单次任务实时录制为 JSONL 文件",
+    )
+    debug_group.add_argument(
         "--config", default=None,
         help="指定 .env 文件路径",
     )
@@ -137,6 +141,9 @@ def main_entry() -> int:
     """主入口；返回退出码。"""
     parser = _build_parser()
     args = parser.parse_args()
+
+    if args.record and (not args.task or args.serve or args.mcp or args.replay):
+        parser.error("--record 只能与单次任务一起使用")
 
     # 应用配置覆盖
     if any([args.capture_mode, args.max_steps is not None, args.model]):
@@ -179,7 +186,8 @@ def main_entry() -> int:
         # 快捷任务模式：构造 sys.argv 模拟 cli.main 的处理
         # cli.main() 已经会检测 sys.argv
         return cli_main(task_arg=task, verbose=args.verbose, plain=args.plain,
-                        no_color=args.no_color, dry_run=args.dry_run)
+                        no_color=args.no_color, dry_run=args.dry_run,
+                        record_path=args.record)
     return cli_main(verbose=args.verbose, plain=args.plain,
                     no_color=args.no_color, dry_run=args.dry_run)
 

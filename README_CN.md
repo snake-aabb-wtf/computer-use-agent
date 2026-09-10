@@ -298,14 +298,17 @@ WEBHOOK_EVENTS=done,error,interrupted
 录制会话后回放用于调试 / 审计 / 数据集：
 
 ```bash
-# 跑完任务后，/save 导出为 JSONL
+# 单次任务实时录制为 JSONL
+cua --record logs/saved/session.jsonl "打开记事本，输入 Hello"
+
+# 回放（默认 dry-run）
+cua --replay logs/saved/session.jsonl --verbose
+
+# 交互式会话仍可用 /save 导出当前对话 JSON
 cua
 > 打开记事本，输入 Hello
 > /save
 Saved to: logs/saved/conversation_20260624_103045.json
-
-# 回放（默认 dry-run）
-cua --replay logs/saved/conversation_20260624_103045.json --verbose
 ```
 
 ---

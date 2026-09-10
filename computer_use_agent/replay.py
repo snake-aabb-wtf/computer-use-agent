@@ -6,8 +6,8 @@ JSONL 格式:
     {"type": "footer", "finished_at": "...", "total_steps": N, "result": "..."}
 
 录制:
-    在 agent.run() 中通过 RecordSink 写入 JSONL
-    CLI: /save 增强支持 .jsonl 格式
+    在 agent.run(..., record_sink=sink) 中通过 RecordSink 写入 JSONL
+    CLI: cua --record session.jsonl "..."
 
 回放:
     replay_session(file)  ——  按时间顺序打印动作

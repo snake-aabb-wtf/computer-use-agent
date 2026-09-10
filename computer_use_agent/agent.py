@@ -368,13 +368,49 @@ class Agent:
 
         return messages
 
-    def run(self, task: str, stream: bool = False) -> str:
+    def _record_header(self, record_sink, task: str) -> None:
+        """把录制器接入任务边界；录制失败不应阻断 Agent。"""
+        if record_sink is None:
+            return
+        try:
+            record_sink.write_header(config.LLM_MODEL, task)
+        except Exception as e:
+            self.logger.warning(f"Record header failed: {e}")
+
+    def _record_step(self, record_sink, step: int, action: dict, result: str) -> None:
+        """记录一个模型决策及其结果。"""
+        if record_sink is None:
+            return
+        try:
+            record_sink.write_step(
+                step,
+                action.get("thought", ""),
+                action,
+                result,
+            )
+        except Exception as e:
+            self.logger.warning(f"Record step failed: {e}")
+
+    def _record_footer(self, record_sink, status: str, result: str) -> None:
+        """结束当前任务的录制；同样保持录制故障与执行链隔离。"""
+        if record_sink is None:
+            return
+        try:
+            record_sink.write_footer(status, result, self.stats.total_steps)
+        except Exception as e:
+            self.logger.warning(f"Record footer failed: {e}")
+
+    def run(self, task: str, stream: bool = False, record_sink=None) -> str:
         """执行一个任务。
 
         修复 D3: 新增 stream 参数。
         stream=True 时让 LLM 调用走流式 API（_chat_streaming）。
         修复 F5: 在 done / error / interrupted / max-steps 路径触发 Webhook。
+
+        ``record_sink`` 是可选的 RecordSink-like 对象。Agent 只负责写入
+        任务事件，不负责关闭它，因此调用方可以决定文件生命周期。
         """
+        self._record_header(record_sink, task)
         self.logger.info(f"🚀 Task: {task}")
         self.logger.info(f"   Model: {config.LLM_MODEL} | Max steps: {config.MAX_STEPS}")
         self._touch_activity("task_start")
@@ -403,7 +439,9 @@ class Agent:
                     self._stop_effects()
                 # 修复 F5.2: 触发 interrupted webhook
                 self._emit_webhook("interrupted", result="已中断")
-                return "已中断"
+                result = "已中断"
+                self._record_footer(record_sink, "interrupted", result)
+                return result
 
             # 修复 D1: 主循环结束自动消费排队任务
             if step == 1:
@@ -489,11 +527,15 @@ class Agent:
             # 5. 错误计数与恢复
             if action.get("_error"):
                 self._consecutive_errors += 1
+                error_result = f"LLM error: {action.get('_error')}"
+                self._record_step(record_sink, step, action, error_result)
                 if self._consecutive_errors >= 5:
                     self.logger.error("  ❌ 5 consecutive errors, aborting")
                     # 修复 F5.2: 触发 error webhook
                     self._emit_webhook("error", error="Too many consecutive errors")
-                    return "Too many consecutive errors"
+                    result = "Too many consecutive errors"
+                    self._record_footer(record_sink, "error", result)
+                    return result
                 self.history.append({
                     "role": "assistant",
                     "content": action.get("_raw", ""),
@@ -511,6 +553,7 @@ class Agent:
             act = action.get("action", "")
             if act == "done":
                 msg = action.get("message", "Task completed")
+                self._record_step(record_sink, step, action, msg)
                 self.logger.info(f"\n✅ {msg}")
                 self.logger.info(f"   {self.stats.summary()}")
                 if config.VISUAL_EFFECTS and not self.dry_run:
@@ -520,9 +563,11 @@ class Agent:
                 if queued:
                     next_task = queued.pop(0)
                     self.logger.info(f"\n▶ Auto-running queued task: {next_task[:60]}")
-                    return self.run(next_task)
+                    self._record_footer(record_sink, "done", msg)
+                    return self.run(next_task, stream=stream, record_sink=record_sink)
                 # 修复 F5.2: 触发 done webhook
                 self._emit_webhook("done", result=msg)
+                self._record_footer(record_sink, "done", msg)
                 return msg
 
             # 7. 模拟模式：保留模型生成的动作，但绝不触碰桌面。
@@ -546,12 +591,15 @@ class Agent:
                     "role": "user",
                     "content": result,
                 })
+                self._record_step(record_sink, step, action, result)
+                self._record_footer(record_sink, "dry_run", result)
                 return result
 
             # 7. 执行动作
             self._touch_activity(f"execute_{act}")
             result = execute(action)
             log_action(self.logger, step, action, result)
+            self._record_step(record_sink, step, action, result)
 
             # 8. 借鉴: 工具循环护栏 (tool_guardrails.py)
             action_failed = "❌" in result
@@ -569,7 +617,9 @@ class Agent:
                 continue
             elif guardrail.action == "halt":
                 self.logger.error(f"  🛡 {guardrail.message}")
-                return f"Guardrail halt: {guardrail.message}"
+                result = f"Guardrail halt: {guardrail.message}"
+                self._record_footer(record_sink, "error", result)
+                return result
             elif guardrail.action == "warn":
                 self.logger.warning(f"  🛡 {guardrail.message}")
                 self.history.append({
@@ -622,7 +672,9 @@ class Agent:
         if queued:
             next_task = queued.pop(0)
             self.logger.info(f"\n▶ Auto-running queued task: {next_task[:60]}")
-            return self.run(next_task)
+            result = f"Max steps {config.MAX_STEPS} reached"
+            self._record_footer(record_sink, "max_steps", result)
+            return self.run(next_task, stream=stream, record_sink=record_sink)
 
         self.logger.warning(f"⚠ Max steps {config.MAX_STEPS} reached")
         self.logger.info(f"   {self.stats.summary()}")
@@ -630,4 +682,6 @@ class Agent:
             self._stop_effects()
         # 修复 F5.2: 触发 error webhook（max steps 也算未完成）
         self._emit_webhook("error", error=f"Max steps {config.MAX_STEPS} reached")
-        return f"Max steps {config.MAX_STEPS} reached"
+        result = f"Max steps {config.MAX_STEPS} reached"
+        self._record_footer(record_sink, "max_steps", result)
+        return result

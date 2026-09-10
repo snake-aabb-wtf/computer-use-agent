@@ -992,7 +992,7 @@ class CLI:
 
 def main(task_arg: str = None, verbose: bool = False,
          plain: bool = False, no_color: bool = False,
-         dry_run: bool = False) -> int:
+         dry_run: bool = False, record_path: str = None) -> int:
     """CLI 入口。修复 C4: 返回退出码。
 
     Args:
@@ -1001,6 +1001,7 @@ def main(task_arg: str = None, verbose: bool = False,
         plain: 纯文本模式（不启用 Rich TUI）
         no_color: 禁用 ANSI 颜色
         dry_run: 仅生成不执行
+        record_path: 将单次任务实时录制为 JSONL
 
     Returns:
         退出码: 0=成功, 1=错误, 2=用户中断
@@ -1032,7 +1033,16 @@ def main(task_arg: str = None, verbose: bool = False,
             border_style=BRONZE,
         ))
         try:
-            result = agent.run(task_arg, stream=verbose)
+            if record_path:
+                from .replay import RecordSink
+                with RecordSink(record_path) as record_sink:
+                    result = agent.run(
+                        task_arg,
+                        stream=verbose,
+                        record_sink=record_sink,
+                    )
+            else:
+                result = agent.run(task_arg, stream=verbose)
             # 修复 V3: 多语言中断关键字检测（不再硬编码 "已中断"）
             from .i18n import t
             interrupt_keywords = (

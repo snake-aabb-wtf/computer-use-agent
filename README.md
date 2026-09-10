@@ -303,14 +303,17 @@ Payload:
 Record a session and replay it later for debugging / auditing / dataset:
 
 ```bash
-# After running a task, /save exports a JSONL file
+# Record a single task to JSONL in real time
+cua --record logs/saved/session.jsonl "open notepad and type Hello"
+
+# Replay (dry-run by default)
+cua --replay logs/saved/session.jsonl --verbose
+
+# /save remains available in the interactive session for a JSON conversation export
 cua
 > open notepad and type Hello
 > /save
 Saved to: logs/saved/conversation_20260624_103045.json
-
-# Replay (dry-run by default)
-cua --replay logs/saved/conversation_20260624_103045.json --verbose
 ```
 
 ---
