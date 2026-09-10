@@ -176,3 +176,33 @@ def test_invalid_som_element_does_not_click_screen_center(monkeypatch):
 
     assert "执行失败" in result
     assert clicked == []
+
+
+def test_api_uses_threading_http_server(monkeypatch):
+    from computer_use_agent import api
+
+    seen = {}
+
+    class FakeServer:
+        def __init__(self, address, handler):
+            seen["address"] = address
+            seen["handler"] = handler
+
+        def serve_forever(self):
+            raise KeyboardInterrupt
+
+        def shutdown(self):
+            seen["shutdown"] = True
+
+        def server_close(self):
+            seen["closed"] = True
+
+    monkeypatch.setattr(api, "ThreadingHTTPServer", FakeServer)
+    monkeypatch.setattr(api, "_worker", lambda: None)
+
+    api.serve(host="127.0.0.1", port=29999)
+
+    assert seen["address"] == ("127.0.0.1", 29999)
+    assert seen["handler"] is api._APIHandler
+    assert seen["shutdown"] is True
+    assert seen["closed"] is True

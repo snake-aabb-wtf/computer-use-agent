@@ -28,7 +28,7 @@ import threading
 import time
 import logging
 import socket
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from . import config
@@ -474,7 +474,9 @@ def serve(host: str = None, port: int = None):
     worker = threading.Thread(target=_worker, daemon=True)
     worker.start()
 
-    server = HTTPServer((host, port), _APIHandler)
+    # SSE 会在 _stream_task() 中保持连接直到任务结束；使用线程化 server
+    # 避免一个长连接阻塞 status/run/stop 等其他 API 请求。
+    server = ThreadingHTTPServer((host, port), _APIHandler)
     logger.info(f"  API server: http://{host}:{port}")
     logger.info(f"  Endpoints: /health  /run  /status/<id>  /stream/<id>  /tasks  /stop")
     if config.API_TOKEN:
@@ -488,5 +490,6 @@ def serve(host: str = None, port: int = None):
         pass
     finally:
         server.shutdown()
+        server.server_close()
         _task_queue.put((None, None))  # 停止 worker
         _running = False
