@@ -156,3 +156,23 @@ def test_mcp_logger_stream_is_separate_from_stdout(monkeypatch, tmp_path):
     assert console_handlers
     assert console_handlers[0].stream is stream
     assert "protocol-safe log" in stream.getvalue()
+
+
+def test_invalid_som_element_does_not_click_screen_center(monkeypatch):
+    from computer_use_agent import config
+    from computer_use_agent import executor
+    from computer_use_agent.uia_tree import UIElement
+
+    monkeypatch.setattr(config, "CAPTURE_MODE", "som")
+    clicked = []
+    monkeypatch.setattr(
+        executor.pyautogui,
+        "click",
+        lambda *args, **kwargs: clicked.append((args, kwargs)),
+    )
+    executor.set_som_elements([UIElement(1, "Button", "OK", (100, 200, 80, 30))])
+
+    result = executor.execute({"action": "left_click", "element": 999})
+
+    assert "执行失败" in result
+    assert clicked == []

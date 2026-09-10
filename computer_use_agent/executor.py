@@ -209,10 +209,9 @@ def _resolve_click_target(action: dict) -> tuple[int, int]:
         for elem in elements_snapshot:
             if elem.index == elem_idx:
                 return elem.center()
-        # 找不到元素，fallback 到屏幕中心
-        import pyautogui
-        w, h = pyautogui.size()
-        return w // 2, h // 2
+        # 元素编号可能因截图刷新而过期。点击屏幕中心具有不可预测的
+        # 破坏性，必须让上层看到失败并重新截图，而不是盲点一个位置。
+        raise ValueError(f"SOM element not found: {elem_idx}")
     return action["coordinate"]
 
 
