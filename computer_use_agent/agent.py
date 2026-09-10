@@ -9,7 +9,7 @@ from . import config
 from .screen import capture, capture_and_save, capture_som
 from .llm import chat
 from .executor import execute, set_som_elements
-from .prompts import build_system_prompt
+from .prompts import build_plugin_guidance, build_system_prompt
 from .screen import get_screen_size
 from .logger import setup_logger, log_action, log_action_json
 from .sanitization import repair_message_sequence, sanitize_api_messages
@@ -146,6 +146,20 @@ class Agent:
         except Exception:
             w, h = 0, 0
         self.system_prompt = build_system_prompt(w, h, config.LLM_MODEL, config.CAPTURE_MODE)
+
+        # Discover plugins once and expose their schemas to the model. Plugin
+        # loading is best-effort: a broken optional plugin must not prevent the
+        # core desktop agent from starting.
+        try:
+            from .plugins import get_registry
+
+            self.plugin_registry = get_registry()
+            plugin_guidance = build_plugin_guidance(self.plugin_registry.list_all())
+            if plugin_guidance:
+                self.system_prompt += "\n\n" + plugin_guidance
+        except Exception as e:
+            self.plugin_registry = None
+            self.logger.warning(f"Plugin discovery failed: {e}")
 
         # 修复 F1.3: 注入屏幕元信息到 system_prompt 末尾
         try:

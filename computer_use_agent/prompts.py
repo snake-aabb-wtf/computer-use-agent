@@ -7,6 +7,7 @@
 - threat_patterns.py: 反注入防护
 """
 
+import json
 import platform
 from datetime import datetime
 
@@ -315,6 +316,34 @@ def build_environment_context(screen_width=0, screen_height=0):
         lines.append(f"- Bounds: (0,0) to ({screen_width},{screen_height})")
     lines.append(f"- Date: {datetime.now().strftime('%Y-%m-%d')}")
     return "\n".join(lines)
+
+
+def build_plugin_guidance(actions: list[dict]) -> str:
+    """Build the prompt section for discovered plugin actions.
+
+    Plugin metadata is kept separate from the cached base prompt so plugins
+    can be discovered once per process without making the core prompt cache
+    aware of user-provided code.
+    """
+    if not actions:
+        return ""
+
+    lines = [
+        "# Custom Plugin Actions",
+        "The following trusted local plugin actions are available in addition to the desktop actions.",
+        "Call one with `action` set to its name and pass its parameters in an `arguments` object.",
+    ]
+    for meta in actions:
+        name = str(meta.get("name", "")).strip()
+        if not name:
+            continue
+        description = str(meta.get("description", "")).strip() or "No description provided."
+        schema = meta.get("schema") or {"type": "object", "properties": {}}
+        schema_json = json.dumps(schema, ensure_ascii=False, separators=(",", ":"))
+        lines.append(f"- `{name}` — {description}")
+        lines.append(f"  Schema: `{schema_json}`")
+
+    return "\n".join(lines) if len(lines) > 3 else ""
 
 
 # ═══════════════════════════════════════════════════════════

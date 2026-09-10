@@ -5,10 +5,13 @@
 - 坐标归一化 (0-1000 -> 实际像素)
 """
 
-import time
-import subprocess
+import json
 import platform
+import subprocess
+import time
 import pyautogui
+
+from .plugins import get_registry
 
 # pyautogui 安全设置
 # 修复 B6: FAILSAFE 改为可配置（默认 False；启用 FAILSAFE 时把鼠标移到屏幕角落可紧急停止）
@@ -299,6 +302,35 @@ def _clipboard_paste(text: str):
         time.sleep(0.1)
 
 
+def _execute_plugin_action(action: dict):
+    """Execute a discovered plugin action, or return None if it is not one.
+
+    Plugin arguments can be supplied in the documented ``arguments`` object
+    (or the common ``args`` alias). For compatibility with the existing
+    action format, top-level action-specific fields are also accepted.
+    """
+    act = action.get("action", "")
+    registry = get_registry()
+    if not registry.has(act):
+        return None
+
+    fn, _metadata = registry.get(act)
+    arguments = action.get("arguments", action.get("args"))
+    if arguments is None:
+        arguments = {
+            key: value
+            for key, value in action.items()
+            if key not in {"action", "thought", "reason"} and not key.startswith("_")
+        }
+    if not isinstance(arguments, dict):
+        raise ValueError("plugin arguments must be an object")
+
+    result = fn(**arguments)
+    if isinstance(result, (dict, list)):
+        return json.dumps(result, ensure_ascii=False)
+    return "" if result is None else str(result)
+
+
 def execute(action: dict) -> str:
     """执行一个动作，返回执行结果描述。
 
@@ -417,6 +449,9 @@ def execute(action: dict) -> str:
             return f"✅ 完成: {msg}"
 
         else:
+            plugin_result = _execute_plugin_action(action)
+            if plugin_result is not None:
+                return plugin_result
             return f"未知动作: {act}"
 
     except Exception as e:

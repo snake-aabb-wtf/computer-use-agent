@@ -239,3 +239,42 @@ def test_agent_dry_run_skips_action_execution(monkeypatch):
 
     assert result.startswith("DRY RUN: skipped execution")
     assert preview_agent.stats.total_steps == 1
+
+
+def test_plugin_action_is_exposed_in_prompt():
+    from computer_use_agent.prompts import build_plugin_guidance
+
+    prompt = build_plugin_guidance([
+        {
+            "name": "send_email",
+            "description": "Send an email",
+            "schema": {
+                "type": "object",
+                "properties": {"to": {"type": "string"}},
+                "required": ["to"],
+            },
+        }
+    ])
+
+    assert "send_email" in prompt
+    assert "Send an email" in prompt
+    assert '"required":["to"]' in prompt
+
+
+def test_plugin_action_dispatches_arguments(monkeypatch):
+    from computer_use_agent import executor
+
+    class FakeRegistry:
+        def has(self, name):
+            return name == "make_note"
+
+        def get(self, name):
+            return (lambda title: f"saved:{title}"), {}
+
+    monkeypatch.setattr(executor, "get_registry", lambda: FakeRegistry())
+    result = executor.execute({
+        "action": "make_note",
+        "arguments": {"title": "hello"},
+    })
+
+    assert result == "saved:hello"
