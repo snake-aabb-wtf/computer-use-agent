@@ -206,3 +206,36 @@ def test_api_uses_threading_http_server(monkeypatch):
     assert seen["handler"] is api._APIHandler
     assert seen["shutdown"] is True
     assert seen["closed"] is True
+
+
+def test_agent_dry_run_skips_action_execution(monkeypatch):
+    from computer_use_agent import agent as agent_module
+    from computer_use_agent import config
+
+    monkeypatch.setattr(config, "CAPTURE_MODE", "vision")
+    monkeypatch.setattr(config, "MAX_STEPS", 1)
+    monkeypatch.setattr(agent_module, "get_screen_size", lambda: (100, 100))
+    monkeypatch.setattr(agent_module, "capture", lambda: "screenshot-data")
+    monkeypatch.setattr(agent_module, "build_system_prompt", lambda *args: "prompt")
+    monkeypatch.setattr(
+        agent_module,
+        "chat",
+        lambda *args, **kwargs: {
+            "action": "left_click",
+            "coordinate": [10, 20],
+            "thought": "preview click",
+            "_raw": '{"action":"left_click","coordinate":[10,20]}',
+            "_elapsed": 0.01,
+        },
+    )
+
+    def should_not_execute(action):
+        raise AssertionError("dry-run must not execute actions")
+
+    monkeypatch.setattr(agent_module, "execute", should_not_execute)
+
+    preview_agent = agent_module.Agent(save_screenshots=False, dry_run=True)
+    result = preview_agent.run("click the button")
+
+    assert result.startswith("DRY RUN: skipped execution")
+    assert preview_agent.stats.total_steps == 1

@@ -1022,7 +1022,7 @@ def main(task_arg: str = None, verbose: bool = False,
 
     if task_arg:
         # 修复 C4: 单次任务模式返回退出码
-        agent = Agent(save_screenshots=not dry_run)
+        agent = Agent(save_screenshots=not dry_run, dry_run=dry_run)
         if verbose:
             agent._verbose_mode = "verbose"
         _print_banner()

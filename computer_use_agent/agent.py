@@ -1,8 +1,9 @@
 """Agent 核心循环 - 深度借鉴 Hermes agent 工程"""
 
-import time
+import json
 import sys
 import threading
+import time
 
 from . import config
 from .screen import capture, capture_and_save, capture_som
@@ -127,9 +128,10 @@ def _slide_image_window(history: list[dict], max_images: int = 5) -> list[dict]:
 class Agent:
     """桌面操作 Agent。"""
 
-    def __init__(self, save_screenshots: bool = True):
+    def __init__(self, save_screenshots: bool = True, dry_run: bool = False):
         self.logger = setup_logger()
         self.save_screenshots = save_screenshots
+        self.dry_run = dry_run
         self.history: list[dict] = []
         self.stats = SessionStats()
         # 修复 B1: 用跨平台 threading.Event 替代 signal.signal
@@ -372,7 +374,7 @@ class Agent:
         self.history.append({"role": "user", "content": task})
 
         # 启动视觉效果（如果启用）
-        if config.VISUAL_EFFECTS:
+        if config.VISUAL_EFFECTS and not self.dry_run:
             try:
                 from .visual_effects import init_effects
                 init_effects(True)
@@ -383,7 +385,7 @@ class Agent:
             # 修复 B1: 跨平台中断检查（threading.Event）
             if self._interrupt_event.is_set():
                 self.logger.warning("⏹ Interrupted by user")
-                if config.VISUAL_EFFECTS:
+                if config.VISUAL_EFFECTS and not self.dry_run:
                     self._stop_effects()
                 # 修复 F5.2: 触发 interrupted webhook
                 self._emit_webhook("interrupted", result="已中断")
@@ -497,7 +499,7 @@ class Agent:
                 msg = action.get("message", "Task completed")
                 self.logger.info(f"\n✅ {msg}")
                 self.logger.info(f"   {self.stats.summary()}")
-                if config.VISUAL_EFFECTS:
+                if config.VISUAL_EFFECTS and not self.dry_run:
                     self._stop_effects()
                 # 修复 D1: done 后消费排队任务
                 queued = self._consume_queue()
@@ -508,6 +510,29 @@ class Agent:
                 # 修复 F5.2: 触发 done webhook
                 self._emit_webhook("done", result=msg)
                 return msg
+
+            # 7. 模拟模式：保留模型生成的动作，但绝不触碰桌面。
+            # 模拟执行不会改变屏幕状态，因此继续请求模型只会重复同一个
+            # 动作；返回首个非 done 动作即可给调用方安全、可审计的预览。
+            if self.dry_run:
+                clean_action = {
+                    key: value for key, value in action.items()
+                    if not key.startswith("_")
+                }
+                result = (
+                    "DRY RUN: skipped execution of "
+                    f"{json.dumps(clean_action, ensure_ascii=False)}"
+                )
+                log_action(self.logger, step, action, result)
+                self.history.append({
+                    "role": "assistant",
+                    "content": action.get("_raw", str(action)),
+                })
+                self.history.append({
+                    "role": "user",
+                    "content": result,
+                })
+                return result
 
             # 7. 执行动作
             self._touch_activity(f"execute_{act}")
@@ -587,7 +612,7 @@ class Agent:
 
         self.logger.warning(f"⚠ Max steps {config.MAX_STEPS} reached")
         self.logger.info(f"   {self.stats.summary()}")
-        if config.VISUAL_EFFECTS:
+        if config.VISUAL_EFFECTS and not self.dry_run:
             self._stop_effects()
         # 修复 F5.2: 触发 error webhook（max steps 也算未完成）
         self._emit_webhook("error", error=f"Max steps {config.MAX_STEPS} reached")
